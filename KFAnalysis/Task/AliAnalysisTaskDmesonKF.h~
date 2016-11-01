@@ -1,0 +1,236 @@
+#ifndef ALIANALYSISTASKDMESONKF_H
+#define ALIANALYSISTASKDMESONKF_H
+
+/* Copyright(c) 1998-2008, ALICE Experiment at CERN, All rights reserved. *
+ * See cxx source for full Copyright notice                               */
+
+/* $Id$ */ 
+
+//**************************************************************************
+/// \class Class AliAnalysisTaskDmesonKF
+/// \brief AliAnalysisTaskSE for the D+ and D0 using the Kalman Filter
+/// \author Fabrizio Grosa, INFN Turin, grosa@to.infn.it
+//**************************************************************************
+
+#include <vector>
+#include <TROOT.h>
+#include <TSystem.h>
+#include <TH1F.h>
+#include <TH2F.h>
+#include <TH3F.h>
+#include <THnSparse.h>
+#include <TArrayD.h>
+#include <TObjArray.h>
+
+#include "AliAnalysisTaskSE.h"
+#include "AliExternalTrackParam.h"
+#include "AliESDEvent.h"
+#include "AliESDfriend.h"
+#include "AliStack.h"
+#include "AliESDtrackCuts.h"
+#include "AliVVertex.h"
+#include "AliESDVertex.h"
+#include "AliPID.h"
+#include "AliPIDResponse.h"
+
+#include "KFParticle.h"
+#include "KFParticleBase.h"
+#include "KFPTrack.h"
+#include "KFPVertex.h"
+#include "KFVertex.h"
+
+class AliAnalysisTaskDmesonKF : public AliAnalysisTaskSE
+{
+ public:
+
+  enum EPileup {kNoPileupSelection,kRejectPileupEvent,kRejectTracksFromPileupVertex,kRejectMVPileupEvent};
+  enum {kDzeroToKpi,kDplusToKpipi};
+   
+  AliAnalysisTaskDmesonKF();
+  AliAnalysisTaskDmesonKF(const char *name, Int_t meson=kDzeroToKpi, Bool_t readMC=kTRUE);
+  virtual ~AliAnalysisTaskDmesonKF();
+
+  /// Implementation of interface methods
+  virtual void UserCreateOutputObjects();
+  virtual void UserExec(Option_t *option);
+  virtual void Terminate(Option_t *option);
+
+  void SetReadMC(Bool_t readMC) {fReadMC = readMC;}
+  void SetDoQAanalysis(Bool_t QA) {fQAonKF=QA;}
+  void SetMeson(Int_t meson=kDzeroToKpi) {
+    if(meson==kDzeroToKpi) fPDGcode=421;
+    else if(meson==kDplusToKpipi) fPDGcode=411;
+    else {
+      cerr << "ERROR: only D0 and D+ mesons are implemented" << endl;
+      return;
+    }
+    fMassMean=TDatabasePDG::Instance()->GetParticle(fPDGcode)->Mass();
+  }
+  
+  void SetESDtrackCuts(AliESDtrackCuts* ESDcuts) {fESDtrackCuts = ESDcuts;}
+  void SetMassWindow(Double_t massmin, Double_t massmax) {fMassMin=massmin; fMassMax=massmax;}  
+  void SetMinPt(Double_t minpt) {fPtMin = minpt;}
+  void SetSearchUpToQuark(Bool_t search) {fSearchUpToQuark=search;}
+  void SetTriggerMask(ULong64_t trmask) {fTriggerMask = trmask;}
+  void SetTriggerClass(TString *trclass) {fTriggerClass[0] = trclass[0]; fTriggerClass[1] = trclass[1];}
+  void SetMaxFiducialRapidity(Double_t y) {fMaxRapidCand=y;}
+  void SetUsePID(Bool_t usePID) {fUsePID=usePID;}
+  void SetUseStrongPID(Bool_t strongPID, Double_t ptmax) {fUseStrongPID=strongPID; fMaxPtForStrongPID=ptmax;}
+  void SetMinVtxType(Int_t minvtxtype) {fMinVtxType=minvtxtype;}
+  void SetMaxVtxZ(Double_t maxZ) {fMaxVtxZ=maxZ;}    
+  void SetMinVtxContr(Int_t mincontr) {fMinVtxContr=mincontr;}
+  void SetOptPileup(Int_t optpileup) {fOptPileup=optpileup;}
+  void SetCutOnzVertexSPD(Int_t opt) {
+    if(opt>=0 && opt<=2) fCutOnzVertexSPD=opt;
+    else AliError("Wrong option for cut on zVertexSPD");
+  }
+  void SetLooseCuts(Bool_t cuts, vector<Double_t> ptlims, vector<Double_t> mindaupt,vector<Double_t> cospmin, vector<Double_t> decLmin, 
+		    vector<Double_t> ndecLmin, vector<Double_t> sigvtxmax, vector<Double_t> chimax, vector<Double_t> PVchimax) {
+    fLooseCuts=cuts;
+    fPtLims=ptlims; 
+    fMinDauPt=mindaupt;
+    fCospMin=cospmin; 
+    fDecLMin=decLmin; 
+    fNDecLXYMin=ndecLmin; 
+    fSigVtxMax=sigvtxmax; 
+    fChiMax=chimax; 
+    fPVChiMax=PVchimax; 
+ }
+  void SetTransportToReco(Bool_t transporttoreco) {fTransportToReco=transporttoreco;}
+
+ private: 
+
+  AliAnalysisTaskDmesonKF(const AliAnalysisTaskDmesonKF &source);
+  AliAnalysisTaskDmesonKF& operator=(const AliAnalysisTaskDmesonKF& source); 
+
+  void CreateSparses();
+  void CreateMCGenAccHistos();
+  void CreateQAhistos();
+  void DoQAanalysis(AliESDEvent* esd, AliStack* stack);
+  void ConvertAliExternalTrackParamToKFPTrack(const AliExternalTrackParam* track, KFPTrack &kfptrack);
+  void ConvertVertex(const AliVVertex *alipvertex, KFPVertex &pvertex);
+  void RecoKFMotherQuality(Double_t *resvec,Double_t *pullsvec,Double_t &chiS,Int_t &ndf,TParticle *mcpart,AliESDtrack **dau,Int_t *daupdg,
+			   KFVertex &pv,float *mcdecvtx,Bool_t massconstraint, Bool_t topoconstraint, float *decvtx, float *decvtxC);
+  void RecoKFDaughterQuality(Double_t *resvec,Double_t *pullsvec,Double_t &chiS,Int_t &ndf,TParticle *mctrack,AliESDtrack *esdtrack,float *decvtx,
+			     float *recodecvtxC);
+  void RecoPVQuality(Double_t *resvec,Double_t *pullsvec,Double_t &chiS,Int_t &ndf,KFVertex pv,AliStack *stack);
+  void RecoESDMotherQuality(Double_t *resvec,Double_t *pullsvec,TParticle *mcpart, AliESDtrack** dau, Int_t *daupdg, AliESDVertex* pv, 
+			    float *mcdecvtx, AliESDEvent* esdEvent);
+  void RecoESDTracksQuality(Double_t *resvec, Double_t *pullsvec, TParticle* mctrack, AliESDtrack* track, AliESDEvent* esdEvent, AliESDVertex* pv);
+  void RecoESDPVQuality(Double_t *resvec, Double_t *pullsvec, Double_t &chiS, Int_t &ndf, AliESDVertex* pv,AliStack* stack);
+  AliESDVertex* RemoveDaughtersFromESDPrimary(AliESDVertex *pv, AliESDtrack** dautracks, AliESDEvent* esdEvent);
+  void GetTracksArrays(AliESDEvent *esdEvent);
+  Int_t IdentifyParticleTPC(AliESDtrack* track, AliPID::EParticleType species); //-1->not compatible, 0->compatible, 1->identified
+  Int_t IdentifyParticleTOF(AliESDtrack* track, AliPID::EParticleType species); //-1->not compatible, 0->compatible, 1->identified
+  Bool_t CheckTPCPIDStatus(AliESDtrack* track);
+  Bool_t CheckTOFPIDStatus(AliESDtrack* track);
+  Int_t DplusPID(AliESDtrack** tracks,Bool_t strongPID=kFALSE); //return 1 if is identified as a D+, 0 otherwise
+  Int_t D0PID(AliESDtrack** tracks,Bool_t strongPID=kFALSE); //return 3 if it could be D0 or D0bar, 2 for D0bar, 1 for D0 and 0 if discarted
+  void Combine2ProngsKF(KFVertex pv, AliStack* stack);
+  void Combine3ProngsKF(KFVertex pv, AliStack* stack);
+  void FillSparses(KFParticle DMesonKF,KFVertex pv,Int_t label1,Int_t label2,Int_t label3,Double_t mindaupt,Double_t sigvtx,Double_t d0d0exp,Int_t PID,AliStack* stack);
+  Int_t MatchToMC(AliStack* stack, Int_t firstlabel, Int_t secondlabel, Int_t thirdlabel);  
+  Bool_t IsInFiducialAcceptance(Double_t pt, Double_t y);
+  void FillMCGenAccHistos(AliStack* stack);
+  Bool_t CheckAcceptance(AliStack *stack, Int_t nDau, Int_t *labdau);
+  Double_t GetRapidity(KFParticle part, Int_t pdg);
+  Double_t GetPointingAngle(KFParticle part, KFVertex pv, Bool_t isXY);
+  Double_t GetSigmaVtx(KFParticle part, KFParticle* dau[]); 
+  Double_t GetNormMaxd0d0exp(KFParticle part, KFParticle* dau[], KFVertex pv);
+  
+  enum {fNVarsForResHistos=16};
+  enum {fNVarsForResHistosDau=10};
+  enum {fNVarsForSparses=14};
+
+  TList *fOutput; //!<! list send on output slot 0
+  TH1F *fHistNEvents; //!<!hist. for No. of events
+  THnSparseF *fSparse[3];//!<! sparses with physical variables for all candidates and prompt and feed-down D mesons in case of fReadMC
+  THnSparseF *fMCGenAccPrompt;//!<! MC gen acc step for prompt D mesons
+  THnSparseF *fMCGenAccFD;//!<! MC gen acc step for feed-down D mesons
+  THnSparseF *fHistPVres;//!<! PV residuals histo for QA analysis
+  THnSparseF *fHistPVpulls;//!<! PV pulls histo for QA analysis
+  TH1F *fHistPVchiS;//!<! PV chi square histo for QA analysis
+  TH1F *fHistPVprob;//!<! PV probability histo for QA analysis
+  THnSparseF *fHistPVHFres;//!<! PV with D meson residuals histo for QA analysis
+  THnSparseF *fHistPVHFpulls;//!<! PV with D meson pulls histo for QA analysis
+  TH1F *fHistPVHFchiS;//!<! PV with D meson chi square histo for QA analysis
+  TH1F *fHistPVHFprob;//!<! PV with D meson probability histo for QA analysis
+  THnSparseF *fHistPVHFremDaures;//!<! PV with D meson after removing daughters and adding mother residuals histo for QA analysis
+  THnSparseF *fHistPVHFremDaupulls;//!<! PV with D meson after removing daughters and adding mother pulls histo for QA analysis 
+  TH1F *fHistPVHFremDauchiS;//!<! PV with D meson after removing daughters and adding mother chi square histo for QA analysis
+  TH1F *fHistPVHFremDauprob;//!<! PV with D meson after removing daughters and adding mother probability histo for QA analysis
+  THnSparseF *fHistPVESDres;//!<! ESD PV residuals histo for QA analysis
+  THnSparseF *fHistPVESDpulls;//!<! PVESD pulls histo for QA analysis
+  TH1F *fHistPVESDchiS;//!<! ESD PV chi square histo for QA analysis
+  TH1F *fHistPVESDprob;//!<! ESD PV probability histo for QA analysis
+  THnSparseF *fHistPVESDHFres;//!<! ESD PV with D meson residuals histo for QA analysis
+  THnSparseF *fHistPVESDHFpulls;//!<! ESD PV with D meson pulls histo for QA analysis
+  TH1F *fHistPVESDHFchiS;//!<! ESD PV with D meson chi square histo for QA analysis
+  TH1F *fHistPVESDHFprob;//!<! ESD PV with D meson probability histo for QA analysis
+  THnSparseF *fHistPVESDHFremDaures;//!<! ESD PV with D meson after removing daughters and adding mother residuals histo for QA analysis
+  THnSparseF *fHistPVESDHFremDaupulls;//!<! ESD PV with D meson after removing daughters and adding mother pulls histo for QA analysis 
+  TH1F *fHistPVESDHFremDauchiS;//!<! ESD PV with D meson after removing daughters and adding mother chi square histo for QA analysis
+  TH1F *fHistPVESDHFremDauprob;//!<! ESD PV with D meson after removing daughters and adding mother probability histo for QA analysis
+  THnSparseF *fHistMres;//!<! Mother residuals vs Dmeson pT histo for QA analysis
+  THnSparseF *fHistMpulls;//!<! Mother pulls vs Dmeson pT histo for QA analysis
+  THnSparseF *fHistMresTopo;//!<! Mother residuals vs pT with topological constraint histo for QA analysis
+  THnSparseF *fHistMpullsTopo;//!<! Mother pulls vs pT with topological constraint histo for QA analysis
+  THnSparseF *fHistMresMass;//!<! Mother residuals vs pT with mass constraint histo for QA analysis
+  THnSparseF *fHistMpullsMass;//!<! Mother pulls vs pT with mass constraint histo for QA analysis
+  TH2F *fHistMchiS;//!<! Mother chi square vs pT histo for QA analysis
+  TH2F *fHistMprob;//!<! Mother probability vs pT histo for QA analysis
+  TH2F *fHistMchiSTopo;//!<! Mother chi square vs pT with topological constraint histo for QA analysis
+  TH2F *fHistMprobTopo;//!<! Mother probability vs pT with topological constraint histo for QA analysis
+  TH2F *fHistMchiSMass;//!<! Mother chi square vs pT with mass constraint histo for QA analysis
+  TH2F *fHistMprobMass;//!<! Mother probability vs pT with mass constraint histo for QA analysis
+  THnSparseF *fHistAliVertMres;//!<! Mother residuals (with AliVertexer) vs Dmeson pT histo for QA analysis
+  THnSparseF *fHistAliVertMpulls;//!<! Mother pulls (with AliVertexer) vs Dmeson pT histo for QA analysis
+  THnSparseF *fHistDres;//!<! Daughters residuals vs D meson pT histo for QA analysis
+  THnSparseF *fHistDpulls;//!<! Daughters pulls vs D meson pT histo for QA analysis
+  TH2F *fHistDchiS;//!<! Daughters chi square vs pT histo for QA analysis
+  TH2F *fHistDprob;//!<! Daughters probability vs pT histo for QA analysis 
+  THnSparseF *fHistTrackres;//!<! ESD tracks parameters residuals vs pT histo for QA analysis
+  THnSparseF *fHistTrackpulls;//!<! ESD tracks parameters pulls vs pT histo for QA analysis
+  Bool_t fReadMC; ///flag to activate the MC truth
+  Bool_t fQAonKF; ///flag to activate the QA checks for the Kalman Filter
+  Int_t fPDGcode; ///PDG code of the selected meson
+  Double_t fMassMean; ///D meson mass from PDG
+  Double_t fMassMin; ///minimum mass for the invariant mass spectrum
+  Double_t fMassMax; ///maximum mass for the invariant mass spectrum
+  Double_t fPtMin; ///minimum pT accepted
+  Int_t fNDau; ///number of daughters of the D meson
+  AliESDtrackCuts *fESDtrackCuts; ///track selection
+  AliPIDResponse *fPIDResponse; ///PID response to identify pions, kaons and protons
+  Double_t fMaxRapidCand; ///max fiducial acceptance
+  Bool_t fSearchUpToQuark; ///flag to search up to quark in checking the origin
+  ULong64_t fTriggerMask; ///trigger mask
+  TString fTriggerClass[2]; ///trigger class
+  Bool_t fUsePID; ///flag to activate the PID
+  Bool_t fUseStrongPID; ///flag to activate the strong PID
+  Double_t fMaxPtForStrongPID; ///max pt for the strong PID
+  Int_t fOptPileup; ///option on pileup 
+  Double_t fMaxVtxZ; /// maximum |z| of primary vertex
+  Int_t fMinVtxType; /// 0: not cut; 1: SPDZ; 2: SPD3D; 3: Tracks
+  Int_t fMinVtxContr; /// minimum vertex contributors
+  Int_t fCutOnzVertexSPD; /// cut on zSPD vertex to remove outliers in centrality vs. tracklets (0=no cut, 1=cut at 12 cm, 2=cut on difference to z of vtx tracks)
+  UInt_t fMinNClustersTPCPID; ///min number of TPC PID clusters 
+  Float_t fCutTOFmismatch; ///max mismatch probability TOF
+  Bool_t fLooseCuts; ///flag to activate loose cuts in selection
+  vector<Double_t> fPtLims; ///pt lims for loose cuts
+  vector<Double_t> fMinDauPt; ///minimum value of the minimum pt of the daughters vs pt (if fLooseCuts)
+  vector<Double_t> fCospMin; ///minimum value of cosp vs pt (if fLooseCuts)
+  vector<Double_t> fDecLMin; ///minimum value of decL vs pt (if fLooseCuts)
+  vector<Double_t> fNDecLXYMin; ///minimum value of norm decL XY vs pt (if fLooseCuts)
+  vector<Double_t> fSigVtxMax; ///maximum value of sigmavtx vs pt (if fLooseCuts)
+  vector<Double_t> fChiMax; ///maximum value of chi square vs pt (if fLooseCuts)
+  vector<Double_t> fPVChiMax; ///maximum value of PV chi square vs pt (if fLooseCuts)
+  TObjArray *fPosTracksArray; ///array for positive tracks
+  TObjArray *fNegTracksArray; ///array for negative tracks
+  Bool_t fTransportToReco; ///flag to activate the transport to reconstructed points instead of MC in the QA analysis
+
+  /// \cond CLASSIMP
+  ClassDef(AliAnalysisTaskDmesonKF,1); /// AliAnalysisTask for the D mesons using the Kalman Filter
+  /// \endcond
+};
+
+#endif

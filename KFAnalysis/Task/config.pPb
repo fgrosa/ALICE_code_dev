@@ -1,0 +1,8 @@
+HasParFile KFParticle
+Tasks Dplus, DplusnoPID
+
+Includes $TRAIN_ROOT/fgrosa_HFE/kfparticle/KFParticle
+
+Classes AliAnalysisTaskDmesonKF
+
+Lists LHC13
