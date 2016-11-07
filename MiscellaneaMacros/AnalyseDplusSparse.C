@@ -38,15 +38,15 @@
 
 //________________________________________________________________________________________________________________
 //global variables
-const TString cent = "2040";
+const TString cent = "3050";
 const TString axesfile = "axes";
-const TString cutsfile = Form("Cent%s/cutset_d0cut",cent.Data());
+const TString cutsfile = Form("Cent%s/cutset_topocut2.txt",cent.Data());
 
-const Int_t nDataFiles = 3;
-const TString datafilename[nDataFiles] = {//Form("$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/HR_bunch4/AnalysisResults_%s.root",cent.Data())
-                                          Form("$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/HR_bunch1-3/AnalysisResults_%s_part1.root",cent.Data())
-                                          ,Form("$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/HR_bunch1-3/AnalysisResults_%s_part2.root",cent.Data())
-                                          ,Form("$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/HR_bunch1-3/AnalysisResults_%s_part3.root",cent.Data())};
+const Int_t nDataFiles = 2;
+const TString datafilename[nDataFiles] = {Form("$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/HR_bunch4/AnalysisResults_%s.root",cent.Data())
+                                         ,Form("$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/HR_bunch1-3/AnalysisResults_%s.root",cent.Data())};
+                                          //,Form("$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/HR_bunch1-3/AnalysisResults_%s_part2.root",cent.Data())
+                                          //,Form("$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/HR_bunch1-3/AnalysisResults_%s_part3.root",cent.Data())};
 
 //const TString datafilename[nDataFiles] = {Form("$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/HR_bunch4/AnalysisResults_%s.root",cent.Data())};
 const TString datadirname = "PWG3_D2H_InvMassDplus";
@@ -62,7 +62,7 @@ const Int_t bkgfcn = AliHFMassFitter::kExpo;
 
 //________________________________________________________________________________________________________________
 //functions prototypes
-Int_t AnalyseDplus(Bool_t fixmean=kFALSE, Bool_t fixsigma=kFALSE, TString outfilerawname="Cent2040/RawYields_2040_d0cut_bunch1-3.root", TString outfileeffname="Cent3050/Efficiency.root");
+Int_t AnalyseDplus(Bool_t fixmean=kFALSE, Bool_t fixsigma=kFALSE, TString outfilerawname=Form("Cent%s/RawYields_%s_d0cut_bunch1-3.root",cent.Data(),cent.Data()), TString outfileeffname=Form("Cent%s/Efficiency.root",cent.Data()));
 Int_t ReadAxes(TString FileName, vector<string> &axesanmes, vector<int> &axesno);
 Int_t ReadSet(TString FileName, vector<string> &varnames, vector<double> &cutset);
 THnSparseF* GetSparse(TString filename, TString dirname, TString listname, TString sparsename);
