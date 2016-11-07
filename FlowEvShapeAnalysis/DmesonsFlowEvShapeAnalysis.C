@@ -76,7 +76,7 @@ const Int_t typeb=AliHFMassFitter::kExpo;  // Background: 0=expo, 1=linear, 2=po
 const Bool_t fixAlsoMass=kFALSE;
 const Double_t minMassForFit=1.6;
 const Double_t maxMassForFit=2.2;
-const Double_t massRangeForCounting=0.1; // GeV
+const Double_t nSigmaForCounting=3.5;
 
 //not to be set
 enum CutMethod{kAbsCut,kPercCut}; //kAbsCut->absolute cut values, kPercCut->cut according to the % of events with smaller/larger q2
@@ -876,16 +876,20 @@ void FillSignalGraph(TList *masslist,TGraphAsymmErrors **gSignal,TGraphAsymmErro
       fitter.SetInitialGaussianMean(massD);
       fitter.SetInitialGaussianSigma(0.012);
       Bool_t ok=fitter.MassFitter(kFALSE);
+      Double_t sigmaforcounting=0;
+      Double_t meanforcounting=0;
       if(ok){
         fitter.DrawHere(cDeltaPhi->cd(ipad),3,1);
         fitter.Signal(3,signal,esignal);
+        sigmaforcounting=fitter.GetSigma();
+        meanforcounting=fitter.GetMean();
       }
       gSignal[iPt]->SetPoint(iPhi,iPhi,signal);
       gSignal[iPt]->SetPointError(iPhi,0,0,esignal,esignal);
       TF1* fB1=fitter.GetBackgroundFullRangeFunc();
       TF1* fB2=fitter.GetBackgroundRecalcFunc();
-      Double_t minBinSum=histtofit->FindBin(massD-massRangeForCounting);
-      Double_t maxBinSum=histtofit->FindBin(massD+massRangeForCounting);
+      Double_t minBinSum=histtofit->FindBin(meanforcounting-nSigmaForCounting*sigmaforcounting);
+      Double_t maxBinSum=histtofit->FindBin(meanforcounting+nSigmaForCounting*sigmaforcounting);
       Double_t cntSig1=0.;
       Double_t cntSig2=0.;
       Double_t cntErr=0.;
@@ -1106,22 +1110,3 @@ void SetStyle() {
   gStyle->SetLegendBorderSize(0);
   gStyle->SetPalette(53);
 }
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
