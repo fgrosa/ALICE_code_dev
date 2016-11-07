@@ -31,41 +31,33 @@
 
 #endif
 
-//***********************************************************************************//
-//                                                                                   //
-//    Main Functions: Measure_Plane_HandlingBar(), GetRelativePlanesInclination()    //
-//                                                                                   //
-//***********************************************************************************//
+//****************************************************************************//
+//                                                                            //
+//    Main Functions: Measure_Plane_Chip(), GetRelativePlanesInclination()    //
+//                                                                            //
+//****************************************************************************//
 
 //_____________________________________________________________________________________________
 //GLOBAL VARIBALES
-
-//suction planes positions (in mm)
-const Int_t nplanes = 12;
-const Double_t yleft[nplanes] = {-745.07,-685.07,-585.07,-435.07,-235.07,-75.07,34.93,194.93,394.93,534.93,644.93,744.93};
-const Double_t yright[nplanes] = {-744.07,-655.07,-555.07,-395.07,-205.07,-35.07,74.93,224.93,434.93,584.93,684.93,745.93};
-
-const Double_t ymin=-1000;
-const Double_t ymax=1000;
-const Double_t xmin=85;
-const Double_t xmax=115;
+const Double_t ymin=-10;
+const Double_t ymax=20;
+const Double_t xmin=-15;
+const Double_t xmax=5;
 
 //_____________________________________________________________________________________________
 //FUNCTION PROTOTYPES
-Int_t Measure_Plane_HandlingBar(TString FileName="misure_handlingbar_plane_6_10_2016.txt",
-                                TString OutFileNamewoext="misure_handlingbar_plane_6_10_2016_corr", Bool_t onlywithinplanes=kFALSE);
-Int_t GetRelativePlanesInclination(TString FileName1="misure_handlingbar_plane_6_10_2016_corr.root", TString FileName2="misure_handlingbar_plane_7_10_2016_corr.root",
-                                   TString OutFileNamewoext="comp_handlingbar_plane_7_10_2016_6_10_2016");
+Int_t Measure_Plane_Chip(TString FileName="misure_handlingbar_plane_6_10_2016.txt",
+                                TString OutFileNamewoext="misure_handlingbar_plane_6_10_2016_corr");
+Int_t GetRelativePlanesInclination(TString FileName1="misure_handlingbar_plane_6_10_2016_corr.root", TString FileName2="misure_handlingbar_plane_7_10_2016_corr.root", TString OutFileNamewoext="comp_handlingbar_plane_7_10_2016_6_10_2016");
 
 Int_t ReadFile(TString FileName, vector<double> &x, vector<double> &y, vector<double> &z);
 void CreateTxtFile(TString FileName, vector<double> &x, vector<double> &y, vector<double> &z);
-Bool_t IsInside(Double_t y);
 void GetMeanSigmaAndPlanarity(vector<double> z, Double_t &mean, Double_t &sigma, Double_t &planarity);
 void GetDirCosine(TF2* fplane, Double_t dircos[3]);
 
 //_____________________________________________________________________________________________
 //FUNCTION FOR PLANARITY MEASUREMENT
-Int_t Measure_Plane_HandlingBar(TString FileName, TString OutFileNamewoext, Bool_t onlywithinplanes) {
+Int_t Measure_Plane_Chip(TString FileName, TString OutFileNamewoext) {
 
   vector<double> x;
   vector<double> y;
@@ -85,8 +77,10 @@ Int_t Measure_Plane_HandlingBar(TString FileName, TString OutFileNamewoext, Bool
     return 3;
   }
 
-  TGraph2D *g = new TGraph2D(y.size());
-  for(UInt_t iEntry=0; iEntry<y.size(); iEntry++) {
+  UInt_t nPoints=z.size();
+  
+  TGraph2D *g = new TGraph2D(nPoints);
+  for(UInt_t iEntry=0; iEntry<nPoints; iEntry++) {
     g->SetPoint(iEntry,x[iEntry],y[iEntry],z[iEntry]);
   }
 
@@ -108,14 +102,6 @@ Int_t Measure_Plane_HandlingBar(TString FileName, TString OutFileNamewoext, Bool
   Double_t parb = fplane->GetParameter(1);
   Double_t parc = fplane->GetParameter(2);
 
-  Int_t nPoints=0;
-  
-  for(UInt_t iEntry=0; iEntry<y.size(); iEntry++) {
-    if(onlywithinplanes && !IsInside(y[iEntry]))
-      continue;
-    nPoints++;
-  }
-  
   TGraph2D* gcorr = new TGraph2D(nPoints);
   gcorr->SetName("gcorr");
   TGraph* gcorr_dx = new TGraph(nPoints/3);
@@ -126,20 +112,14 @@ Int_t Measure_Plane_HandlingBar(TString FileName, TString OutFileNamewoext, Bool
   gcorr->SetName("gcorr_sx");
   
   vector<double> zcorr;
-  vector<double> zinside;
   UInt_t poscounter=0;
   UInt_t iPoint=0;
-  for(UInt_t iEntry=0; iEntry<y.size(); iEntry++) {
+  for(UInt_t iEntry=0; iEntry<nPoints; iEntry++) {
     if(poscounter>2) poscounter=0;
     zcorr.push_back(z[iEntry]-(para+parb*x[iEntry]+parc*y[iEntry]));
 
-    if(onlywithinplanes && !IsInside(y[iEntry]))
-      continue;
-    
-    zinside.push_back(zcorr[iEntry]);
-    
     gcorr->SetPoint(iEntry,x[iEntry],y[iEntry],zcorr[iEntry]);
-    
+
     if(poscounter==0)
       gcorr_dx->SetPoint(iPoint,y[iEntry],zcorr[iEntry]);
     else if(poscounter==1)
@@ -154,15 +134,7 @@ Int_t Measure_Plane_HandlingBar(TString FileName, TString OutFileNamewoext, Bool
   Double_t mean=0;
   Double_t sigma=0;
   Double_t planarity=0;
-  GetMeanSigmaAndPlanarity(zinside,mean,sigma,planarity);
-
-  TBox** box = new TBox*[nplanes];
-  for(Int_t iPlane=0; iPlane<nplanes; iPlane++) {
-    box[iPlane] = new TBox(yleft[iPlane],-0.200,yright[iPlane],0.200);
-    box[iPlane]->SetLineColor(kRed);
-    box[iPlane]->SetLineWidth(1);
-    box[iPlane]->SetFillStyle(0);
-  }
+  GetMeanSigmaAndPlanarity(zcorr,mean,sigma,planarity);
   
   TCanvas *ccorr2D = new TCanvas("ccorr2D","",1200,900);
   gcorr->SetTitle("");
@@ -179,9 +151,9 @@ Int_t Measure_Plane_HandlingBar(TString FileName, TString OutFileNamewoext, Bool
   l->SetFillColor(kWhite);
   l->SetFillStyle(0);
   l->SetTextSize(0.045);
-  l->AddEntry(gcorr_dx,Form("x = %0.f mm",x[0]),"p");
-  l->AddEntry(gcorr_cent,Form("x = %0.f mm",x[1]),"p");
-  l->AddEntry(gcorr_sx,Form("x = %0.f mm",x[2]),"p");
+  l->AddEntry(gcorr_dx,Form("x = %0.1f mm",x[0]),"p");
+  l->AddEntry(gcorr_cent,Form("x = %0.1f mm",x[1]),"p");
+  l->AddEntry(gcorr_sx,Form("x = %0.1f mm",x[2]),"p");
   
   TPaveText* info = new TPaveText(0.6,0.75,0.89,0.89,"NDC");
   info->SetTextSize(0.045);
@@ -208,24 +180,13 @@ Int_t Measure_Plane_HandlingBar(TString FileName, TString OutFileNamewoext, Bool
   gcorr_dx->Draw("AP");
   gcorr_cent->Draw("P");
   gcorr_sx->Draw("P");
-  for(Int_t iPlane=0; iPlane<nplanes; iPlane++) {
-    box[iPlane]->Draw("same");
-  }
   l->Draw("same");
   info->Draw("same");
 
-  if(!onlywithinplanes) {
-    ccorr2D->SaveAs(Form("%s2D.pdf",OutFileNamewoext.Data()));
-    ccorr->SaveAs(Form("%s.pdf",OutFileNamewoext.Data()));
-    TString outfiletxt = Form("%s.txt",OutFileNamewoext.Data());
-    CreateTxtFile(outfiletxt,x,y,zcorr);
-  }
-  else {
-    ccorr2D->SaveAs(Form("%s_insideplanes_2D.pdf",OutFileNamewoext.Data()));
-    ccorr->SaveAs(Form("%s_insideplanes_.pdf",OutFileNamewoext.Data()));
-    TString outfiletxt = Form("%s_insideplanes_.txt",OutFileNamewoext.Data());
-    CreateTxtFile(outfiletxt,x,y,zcorr);
-  }
+  ccorr2D->SaveAs(Form("%s.pdf",OutFileNamewoext.Data()));
+  ccorr->SaveAs(Form("%s.pdf",OutFileNamewoext.Data()));
+  TString outfiletxt = Form("%s.txt",OutFileNamewoext.Data());
+  CreateTxtFile(outfiletxt,x,y,zcorr);
   
   TFile outfile(Form("%s.root",OutFileNamewoext.Data()),"RECREATE");
   gcorr->Write();
@@ -262,43 +223,48 @@ Int_t GetRelativePlanesInclination(TString FileName1, TString FileName2, TString
   Double_t xref = (xmax+xmin)/2;
   Double_t yref = (ymax+ymin)/2;
   
-  TF1* flinezx1 = new TF1("flinezx1","pol1",xmin,xmax);
-  flinezx1->SetParameters(pars1[0]+pars1[2]*yref,pars1[1]);
+  TF1* flinezx1 = new TF1("flinezx1","pol1",0,xmax-xmin);
+  flinezx1->SetParameters(0,pars1[1]);
   flinezx1->GetYaxis()->SetTitle("z(mm)");
   flinezx1->GetXaxis()->SetTitle("x(mm)");
-  TF1* flinezx2 = new TF1("flinezx2","pol1",xmin,xmax);
-  flinezx2->SetParameters(pars2[0]+pars2[2]*yref,pars2[1]);
+  TF1* flinezx2 = new TF1("flinezx2","pol1",0,xmax-xmin);
+  flinezx2->SetParameters(0,pars2[1]);
   flinezx2->GetYaxis()->SetTitle("z(mm)");
   flinezx2->GetXaxis()->SetTitle("x(mm)");
   flinezx2->SetLineColor(kBlue);
   
-  Double_t toll=(flinezx1->Eval(xmin)-flinezx1->Eval(xmax))/flinezx1->GetParameter(0);
-  Double_t minzx=flinezx1->Eval(xmax)-TMath::Abs(flinezx1->Eval(xmax)*toll/2);
-  if(flinezx2->Eval(xmax)<flinezx1->Eval(xmax)) minzx=flinezx2->Eval(xmax)-TMath::Abs(flinezx2->Eval(xmax)*toll/2);
-  Double_t maxzx=flinezx1->Eval(xmin)+TMath::Abs(flinezx1->Eval(xmin)*toll);
-  if(flinezx2->Eval(xmin)>flinezx1->Eval(xmin)) maxzx=flinezx2->Eval(xmin)+TMath::Abs(flinezx2->Eval(xmin)*toll);
+  Double_t toll=0.1;
+  Double_t minzx=flinezx1->Eval(xmax-xmin);
+  if(flinezx2->Eval(xmax-xmin)<flinezx1->Eval(xmax-xmin)) minzx=flinezx2->Eval(xmax-xmin);
+  Double_t maxzx=flinezx1->Eval(xmax-xmin);
+  if(flinezx2->Eval(xmax-xmin)>flinezx1->Eval(xmax-xmin)) maxzx=flinezx2->Eval(xmax-xmin);
+  
+  if(minzx>0) minzx=-0.;
+  if(maxzx<0) maxzx=0.;
   
   Double_t anglezx1 = TMath::ATan(flinezx1->GetParameter(1));
   Double_t anglezx2 = TMath::ATan(flinezx2->GetParameter(1));
   Double_t deltaanglezx = anglezx1-anglezx2;
   if(deltaanglezx<0) deltaanglezx = TMath::Abs(deltaanglezx);
   
-  TF1* flinezy1 = new TF1("flinezy1","pol1",ymin,ymax);
-  flinezy1->SetParameters(pars1[0]+pars1[1]*xref,pars1[2]);
+  TF1* flinezy1 = new TF1("flinezy1","pol1",0,ymax-ymin);
+  flinezy1->SetParameters(0,pars1[2]);
   flinezy1->GetYaxis()->SetTitle("z(mm)");
   flinezy1->GetXaxis()->SetTitle("y(mm)");
-  TF1* flinezy2 = new TF1("flinezy2","pol1",ymin,ymax);
-  flinezy2->SetParameters(pars2[0]+pars2[1]*xref,pars2[2]);
+  TF1* flinezy2 = new TF1("flinezy2","pol1",0,ymax-ymin);
+  flinezy2->SetParameters(0,pars2[2]);
   flinezy2->GetYaxis()->SetTitle("z(mm)");
   flinezy2->GetXaxis()->SetTitle("y(mm)");
   flinezy2->SetLineColor(kBlue);
   
-  toll=(flinezy1->Eval(ymin)-flinezy1->Eval(ymax))/flinezy1->GetParameter(0);
-  Double_t minzy=flinezy1->Eval(ymax)-TMath::Abs(flinezy1->Eval(ymax)*toll/2);
-  if(flinezy2->Eval(ymax)<flinezy1->Eval(ymax)) minzy=flinezy2->Eval(ymax)-TMath::Abs(flinezy2->Eval(ymax)*toll/2);
-  Double_t maxzy=flinezy1->Eval(ymin)+TMath::Abs(flinezy1->Eval(ymin)*toll);
-  if(flinezy2->Eval(ymin)>flinezy1->Eval(ymin)) maxzy=flinezy2->Eval(ymin)+TMath::Abs(flinezy2->Eval(ymin)*toll);
-
+  Double_t minzy=flinezy1->Eval(ymax-ymin);
+  if(flinezy2->Eval(ymax-ymin)<flinezy1->Eval(ymax-ymin)) minzy=flinezy2->Eval(ymax-ymin);
+  Double_t maxzy=flinezy1->Eval(ymax-ymin);
+  if(flinezy2->Eval(ymax-ymin)>flinezy1->Eval(ymax-ymin)) maxzy=flinezy2->Eval(ymax-ymin);
+  
+  if(minzy>0) minzy=0.;
+  if(maxzy<0) maxzy=0.;
+  
   Double_t anglezy1 = TMath::ATan(flinezy1->GetParameter(1));
   Double_t anglezy2 = TMath::ATan(flinezy2->GetParameter(1));
   Double_t deltaanglezy = anglezy1-anglezy2;
@@ -307,7 +273,7 @@ Int_t GetRelativePlanesInclination(TString FileName1, TString FileName2, TString
   TCanvas* cZX = new TCanvas("cZX","",1200,900);
   flinezx1->SetTitle(Form("y = %0.2f mm",yref));
   flinezx1->GetYaxis()->SetTitleOffset(1.3);
-  flinezx1->GetYaxis()->SetRangeUser(minzx,maxzx);
+  flinezx1->GetYaxis()->SetRangeUser(minzx-toll,maxzx+toll);
   TPaveText* infozx_1 = new TPaveText(0.38,0.78,0.89,0.85,"NDC");
   infozx_1->SetTextSize(0.045);
   infozx_1->SetTextFont(42);
@@ -340,7 +306,7 @@ Int_t GetRelativePlanesInclination(TString FileName1, TString FileName2, TString
   TCanvas* cZY = new TCanvas("cZY","",1200,900);
   flinezy1->SetTitle(Form("x = %0.2f mm",xref));
   flinezy1->GetYaxis()->SetTitleOffset(1.2);
-  flinezy1->GetYaxis()->SetRangeUser(minzy,maxzy);
+  flinezy1->GetYaxis()->SetRangeUser(minzy-toll,maxzy+toll);
   TPaveText* infozy_1 = new TPaveText(0.38,0.78,0.89,0.85,"NDC");
   infozy_1->SetTextSize(0.045);
   infozy_1->SetTextFont(42);
@@ -406,21 +372,6 @@ void CreateTxtFile(TString FileName, vector<double> &x, vector<double> &y, vecto
   }
 
   outSet.close();
-}
-
-Bool_t IsInside(Double_t y) {
-  
-  Bool_t isinside=kTRUE;
-  Int_t iPlane=0;
-  
-  while(isinside==kTRUE && iPlane<nplanes) {
-    if(y<yleft[iPlane] || y>yright[iPlane])
-      isinside=kFALSE;
-    iPlane++;
-  }
-  
-  return isinside;
-     
 }
 
 void GetMeanSigmaAndPlanarity(vector<double> z, Double_t &mean, Double_t &sigma, Double_t &planarity) {
