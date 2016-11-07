@@ -34,13 +34,13 @@
 //GLOBAL VARIABLES
 
 //PtBins of the analysis
-const Int_t nPtBins = 9;
+const Int_t nPtBins = 10;
 const Int_t nPtLims = nPtBins+1;
-const Double_t PtLims[nPtLims] = {2,3,4,5,6,8,10,12,16,24};
+const Double_t PtLims[nPtLims] = {2,3,4,5,6,8,10,12,16,24,36};
 //IP range limits
-Double_t d0limFD[nPtBins] = {200,200,300,300,300,300,300,400};
-Double_t d0lim[nPtBins] = {200,200,300,300,300,300,300,400};
-Double_t d0limPrompt[nPtBins] = {300,300,300,300,300,300,300,300};
+Double_t d0limFD[nPtBins] = {200,200,300,300,300,300,300,400,450};
+Double_t d0lim[nPtBins] = {1000,1000,1000,1000,1000,1000,1000,1000,1000,1000};
+Double_t d0limPrompt[nPtBins] = {300,300,300,300,300,300,300,300,300};
 
 //input file names
 const TString infileMCname="$HOME/ALICE_WORK/Files/Trains/Run1/LHC13/AnalysisResultspPbMC.root";
@@ -55,17 +55,17 @@ enum {kBinned,kUnbinned};
 //_____________________________________________________________________________________________
 //FUNCTION PROTOTYPES
 Int_t FitImpPar(Int_t method=kUnbinned,
-                TString fitoption="RLEM0",
+                TString fitoption="RLEM",
                 Bool_t isSigmaFixed=kFALSE,
-                Double_t nSigmas=1.5,
-                Bool_t isVarBinning=kFALSE,
+                Double_t nSigmas=2.,
+                Bool_t isVarBinning=kTRUE,
                 Bool_t isBkgSub=kFALSE,
-                Bool_t PIDcut=kTRUE,
+                Bool_t PIDcut=kFALSE,
                 Int_t sovert=AliDplusCharmFractionIPfitter::kCentralValue,
                 Int_t SBregion=AliDplusCharmFractionIPfitter::kBoth,
                 Int_t FDtype=AliDplusCharmFractionIPfitter::kConvolution,
-                Int_t bkgtype=AliDplusCharmFractionIPfitter::kDoubleGaussExpo,
-                Int_t impparreb=4, Int_t massreb=5, Int_t SBlow=4, Int_t SBhigh=15,
+                Int_t bkgtype=AliDplusCharmFractionIPfitter::kDoubleGaussDoubleExpo,
+                Int_t impparreb=1, Int_t massreb=5, Int_t SBlow=3, Int_t SBhigh=8,
                 Double_t d0cut=80);
 
 Int_t LoadMCSparses(THnSparseF *&promptsparse, THnSparseF *&trueFDsparse, THnSparseF *&recoFDsparse, THnSparseF *&bkgsparse);
@@ -83,7 +83,7 @@ Int_t FitImpPar(Int_t method,TString fitoption,Bool_t isSigmaFixed,Double_t nSig
   THnSparseF* hMassPtImpRecoFD=0x0;
   THnSparseF* hMassPtImpTrueFD=0x0;
   THnSparseF* hMassPtImpParBkg=0x0;
-  Int_t loadMC=LoadMCSparses(hMassPtImpPrompt,hMassPtImpRecoFD,hMassPtImpTrueFD,hMassPtImpParBkg);
+  Int_t loadMC=LoadMCSparses(hMassPtImpPrompt,hMassPtImpTrueFD,hMassPtImpRecoFD,hMassPtImpParBkg);
   if(loadMC>0) {return 1;}
 
   THnSparseF* hMassPtImpParAll=0x0;
@@ -111,25 +111,38 @@ Int_t FitImpPar(Int_t method,TString fitoption,Bool_t isSigmaFixed,Double_t nSig
   ImpParFitter->SetSideBandsRegion(SBregion);
   ImpParFitter->SetBkgFunction(bkgtype);
   ImpParFitter->SetFDFunction(FDtype);
-  ImpParFitter->SetPID(PIDcut);
-  
+  if(PIDcut) ImpParFitter->SetPID(PIDcut);
+    
   Double_t initparprompt[5] = {0.9,0.,35,300,1};
+  Double_t parprompterr[5];
   Double_t initparFD[5] = {0.5,0.,100,10,1};
-  Double_t initparBkg[10] = {0.3,-30,50,50,0.5,50,50,50,0.5,1};
-
+  Double_t parFDerr[5];
+  Double_t initparBkg[14] = {0.3,-30.,50.,50.,100.,0.8,0.4,30.,50.,50.,100.,0.8,0.5,1.};
+  Double_t parBkgerr[14];
+  
   for(Int_t iPt=0; iPt<nPtBins; iPt++) {
-
+    if(PtLims[iPt]>=8.) ImpParFitter->SetBkgFunction(AliDplusCharmFractionIPfitter::kDoubleGaussExpo);
+    if(PtLims[iPt]>=12.) ImpParFitter->SetBkgFunction(AliDplusCharmFractionIPfitter::kDoubleGaussExpoSymm);
     ImpParFitter->SetRebinImpParHistos(impparreb);
     ImpParFitter->SetPtLims(PtLims[iPt],PtLims[iPt+1]);
     ImpParFitter->SetNSigmas(nSigmas);
     ImpParFitter->SetNSigmaSBLimits(SBlow,SBhigh);
     ImpParFitter->GetSignal(massreb,0,0,1.68,2.05,sovert);
     ImpParFitter->SetFitOptions(fitoption);
+    ImpParFitter->SetFitOptionsPrefit(fitoption);
     ImpParFitter->FixSigmaPromptFromMC(isSigmaFixed);
     ImpParFitter->SetRelativeLimitSigmaPrompt(0.3);
     ImpParFitter->SetLimitsPromptFrac(0.2,1.5);
+    
+    //prefit step (repeated twice)
     ImpParFitter->SetInitialParameters(initparprompt,initparFD,initparBkg);
     ImpParFitter->PrefitStep(-d0limPrompt[iPt],d0limPrompt[iPt],-d0limFD[iPt],d0limFD[iPt],-1000,1000);
+    ImpParFitter->GetPromptParameters(initparprompt,parprompterr);
+    ImpParFitter->GetTrueFDParameters(initparFD,parFDerr);
+    ImpParFitter->GetBkgParameters(initparBkg,parBkgerr);
+    ImpParFitter->SetInitialParameters(initparprompt,initparFD,initparBkg);
+    ImpParFitter->PrefitStep(-d0limPrompt[iPt],d0limPrompt[iPt],-d0limFD[iPt],d0limFD[iPt],-1000,1000);
+    
     if(method==kUnbinned)
       ImpParFitter->FitTree(-d0lim[iPt],d0lim[iPt],kTRUE);
     else if(method==kBinned) {
@@ -227,9 +240,6 @@ Int_t LoadMCSparses(THnSparseF *&promptsparse, THnSparseF *&trueFDsparse, THnSpa
   TFile* infileMC = TFile::Open(infileMCname.Data(),"READ");
   TDirectoryFile* dirMC=0x0;
   TList* listMC=0x0;
-  THnSparseF* hMassPtImpPrompt=0x0;
-  THnSparseF* hMassPtImpRecoFD=0x0;
-  THnSparseF* hMassPtImpTrueFD=0x0;
   
   if(infileMC) {dirMC=(TDirectoryFile*)infileMC->Get(dirMCname.Data()); cout << "MC file opened!" << endl;}
   else {cerr << "Error: File " << infileMCname << " not found. Exit." << endl; return 1;}

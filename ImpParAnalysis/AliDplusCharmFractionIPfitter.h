@@ -17,12 +17,12 @@ public:
   ~AliDplusCharmFractionIPfitter();
 
   enum SovT {kCentralValue,kLowerLimit,kLowerLimitOnlyStat,kLowerLimitOnlySyst,kUpperLimit,kUpperLimitOnlyStat,kUpperLimitOnlySyst};
-  enum bkgtype {kSingleGaussExpo, kDoubleGaussExpo, kDoubleGaussExpoSymm};
-  enum Fdtype {kConvolution, kGaussExpo};
-  enum SBregion {kBoth, kLeft, kRight};
-  enum TreeOrHisto {kTree, kHisto};
-  enum Meson {kB, kD};
-  enum GenFrom {kFromHisto, kFromFunc};
+  enum bkgtype {kSingleGaussExpo,kDoubleGaussExpo,kDoubleGaussExpoSymm,kSingleGaussDoubleExpo,kDoubleGaussDoubleExpo};
+  enum Fdtype {kConvolution,kGaussExpo};
+  enum SBregion {kBoth,kLeft,kRight};
+  enum TreeOrHisto {kTree,kHisto};
+  enum Meson {kB,kD};
+  enum GenFrom {kFromHisto,kFromFunc};
   
   void SetMCPromptSparse(THnSparseF* sparse) {fMCPromptSparse=(THnSparseF*)sparse->Clone();}
   void SetMCTrueFDSparse(THnSparseF* sparse) {fMCTrueFDSparse=(THnSparseF*)sparse->Clone();}
@@ -83,6 +83,7 @@ public:
   void GetPromptFractionWithIPCut(Double_t d0cut, Double_t &promptfrac, Double_t &err, Bool_t genfrac=kFALSE);
   Double_t GetPromptFraction() {return fPromptFraction;}
   Double_t GetPromptFractionErr() {return fPromptFractionErr;}
+  
   Double_t GetPromptFractionGauss() {return fPromptFractionGauss;}
   Double_t GetPromptFractionGaussErr() {return fPromptFractionGaussErr;}
   Double_t GetPromptMean() {return fPromptMean;}
@@ -117,6 +118,21 @@ public:
   Double_t GetBkgSigma2Err() {return fBkgSigma2Err;}
   Double_t GetBkgLambda2() {return fBkgLambda2;}
   Double_t GetBkgLambda2Err() {return fBkgLambda2Err;}
+  Double_t GetBkgLambda3() {return fBkgLambda3;}
+  Double_t GetBkgLambda3Err() {return fBkgLambda3Err;}
+  Double_t GetBkgLambda4() {return fBkgLambda4;}
+  Double_t GetBkgLambda4Err() {return fBkgLambda4Err;}
+  Double_t GetBkgFractionLambda1() {return fBkgFracLambda1;}
+  Double_t GetBkgFractionLambda1Err() {return fBkgFracLambda1Err;}
+  Double_t GetBkgFractionLambda2() {return fBkgFracLambda2;}
+  Double_t GetBkgFractionLambda2Err() {return fBkgFracLambda2Err;}
+  Double_t GetBkgFractionFunc1() {return fBkgFracFunc1;}
+  Double_t GetBkgFractionFunc1Err() {return fBkgFracFunc1Err;}
+  
+  void GetPromptParameters(Double_t parprompt[5], Double_t parprompterr[5]);
+  void GetTrueFDParameters(Double_t partrueFD[5], Double_t partrueFDerr[5]);
+  void GetRecoFDParameters(Double_t parrecoFD[5], Double_t parrecoFDerr[5]);
+  void GetBkgParameters(Double_t parbkg[14], Double_t parbkgerr[14]);
   
   Double_t GetChi() {return fChiSquare;}
   Double_t GetRedChi() {return fChiSquare/fNDF;}
@@ -127,6 +143,7 @@ private:
   ///fit functions
   Double_t Gauss(Double_t d0, Double_t mean, Double_t sigma);
   Double_t ExpoDouble(Double_t d0, Double_t mean, Double_t lambda);
+  Double_t GaussDoubleExpoDouble(Double_t* x, Double_t* par);
   Double_t FunctionImpParPrompt(Double_t* x, Double_t* par);
   Double_t FunctionTrueImpParFD(Double_t* x, Double_t* par);
   Double_t FunctionRecoImpParFD(Double_t *x, Double_t *par);
@@ -211,11 +228,15 @@ private:
   Double_t fBkgMean1;///
   Double_t fBkgSigma1;///
   Double_t fBkgLambda1;///
+  Double_t fBkgLambda3;///
+  Double_t fBkgFracLambda1;///
   Double_t fBkgFractionGauss2;///
   Double_t fBkgMean2;///
   Double_t fBkgSigma2;///
   Double_t fBkgLambda2;///
   Double_t fBkgFracFunc1;///
+  Double_t fBkgLambda4;///
+  Double_t fBkgFracLambda2;///
 
   //limits & constraints
   Bool_t fSigmaPromptFixed; ///fix sigma prompt from MC in fit on data
@@ -242,10 +263,14 @@ private:
   Double_t fBkgMean1Err;///
   Double_t fBkgSigma1Err;///
   Double_t fBkgLambda1Err;///
+  Double_t fBkgLambda3Err;///
+  Double_t fBkgFracLambda1Err;///
   Double_t fBkgFractionGauss2Err;///
   Double_t fBkgMean2Err;///
   Double_t fBkgSigma2Err;///
   Double_t fBkgLambda2Err;//
+  Double_t fBkgLambda4Err;///
+  Double_t fBkgFracLambda2Err;///
   Double_t fBkgFracFunc1Err;///
   
   Double_t fCovFracSigmaPrompt; ///covariance between fprompt and sigmaprompt obtained from the fit

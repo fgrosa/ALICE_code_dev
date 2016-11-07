@@ -40,7 +40,7 @@ AliDplusCharmFractionIPfitter::AliDplusCharmFractionIPfitter()
   ,fMassMean(0)
   ,fMassSigma(0)
   ,fNSigma(1.5)
-  ,fFitOptions("REM")
+  ,fFitOptions("RELM")
   ,fFitOptionsPrefit("RELI")
   ,fReb(1)
   ,fNSigmaSBLow(3)
@@ -69,10 +69,14 @@ AliDplusCharmFractionIPfitter::AliDplusCharmFractionIPfitter()
   ,fBkgMean1(0)
   ,fBkgSigma1(0)
   ,fBkgLambda1(0)
+  ,fBkgLambda3(0)
+  ,fBkgFracLambda1(0)
   ,fBkgFractionGauss2(0)
   ,fBkgMean2(0)
   ,fBkgSigma2(0)
   ,fBkgLambda2(0)
+  ,fBkgLambda4(0)
+  ,fBkgFracLambda2(0)
   ,fBkgFracFunc1(0)
   ,fPromptFractionErr(0)
   ,fPromptFractionGaussErr(0)
@@ -88,10 +92,14 @@ AliDplusCharmFractionIPfitter::AliDplusCharmFractionIPfitter()
   ,fBkgMean1Err(0)
   ,fBkgSigma1Err(0)
   ,fBkgLambda1Err(0)
+  ,fBkgLambda3Err(0)
+  ,fBkgFracLambda1Err(0)
   ,fBkgFractionGauss2Err(0)
   ,fBkgMean2Err(0)
   ,fBkgSigma2Err(0)
   ,fBkgLambda2Err(0)
+  ,fBkgLambda4Err(0)
+  ,fBkgFracLambda2Err(0)
   ,fBkgFracFunc1Err(0)
   ,fCovFracSigmaPrompt(0)
   ,fSigmaPromptFixed(kFALSE) 
@@ -302,7 +310,7 @@ void AliDplusCharmFractionIPfitter::CheckSideBandsImpParDist(Int_t nSigmaWidth)
 void AliDplusCharmFractionIPfitter::PrefitOnPrompt(Double_t d0minPrompt, Double_t d0maxPrompt)
 {
   gStyle->SetOptFit(1);
-  gStyle->SetTextSize(0.045);
+  gStyle->SetTextSize(0.04);
 
   if(!fMCPromptSparse) {
     cerr << "MC Prompt THnSparse not set!!" << endl;
@@ -366,7 +374,7 @@ void AliDplusCharmFractionIPfitter::PrefitOnPrompt(Double_t d0minPrompt, Double_
 void AliDplusCharmFractionIPfitter::PrefitOnFD(Double_t d0minFD, Double_t d0maxFD)
 {
   gStyle->SetOptFit(1);
-  gStyle->SetTextSize(0.045);
+  gStyle->SetTextSize(0.04);
   gStyle->SetTitleSize(0.05,"xy");
   gStyle->SetLabelSize(0.05,"xy");
   gStyle->SetPadLeftMargin(0.16);
@@ -463,7 +471,7 @@ void AliDplusCharmFractionIPfitter::PrefitOnFD(Double_t d0minFD, Double_t d0maxF
     delete ImpParTrueFDFunc;
   }
   else if (fFDType==kGaussExpo) {
-    ImpParRecoFDFunc = new TF1("ImpParRecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParPrompt,d0minFD,d0maxFD,5,"AliDplusCharmFractionIPfitter","FunctionRecoImpParPrompt");
+    ImpParRecoFDFunc = new TF1("ImpParRecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionRecoImpParFD,d0minFD,d0maxFD,5,"AliDplusCharmFractionIPfitter","FunctionRecoImpParPrompt");
     ImpParRecoFDFunc->SetLineColor(kBlue);
     ImpParRecoFDFunc->SetParNames("fractionGauss","mean","sigma","lambdaFD","integral");
     ImpParRecoFDFunc->SetParameters(fInitParamFD);
@@ -475,7 +483,7 @@ void AliDplusCharmFractionIPfitter::PrefitOnFD(Double_t d0minFD, Double_t d0maxF
     ImpParRecoFDFunc->SetParLimits(3,0.000001,1000.);
     ImpParRecoFDFunc->SetParError(3,0.5);
     TVirtualFitter::SetDefaultFitter("Minuit2");
-    hImpParRecoFD->Fit("ImpParRecoFDFunc","RELI");
+    hImpParRecoFD->Fit("ImpParRecoFDFunc",fFitOptionsPrefit.Data());
     fFDFraction1 = ImpParRecoFDFunc->GetParameter(0);
     fFDMean = ImpParRecoFDFunc->GetParameter(1);
     fFDLambda1 = ImpParRecoFDFunc->GetParameter(2);
@@ -506,7 +514,7 @@ void AliDplusCharmFractionIPfitter::PrefitOnFD(Double_t d0minFD, Double_t d0maxF
 void AliDplusCharmFractionIPfitter::PrefitOnBkg(Double_t d0minBkg, Double_t d0maxBkg, Bool_t printSB)
 {
   gStyle->SetOptFit(1);
-  gStyle->SetTextSize(0.045);
+  gStyle->SetTextSize(0.04);
   gStyle->SetTitleSize(0.05,"xy");
   gStyle->SetLabelSize(0.05,"xy");
   gStyle->SetPadLeftMargin(0.16);
@@ -540,12 +548,12 @@ void AliDplusCharmFractionIPfitter::PrefitOnBkg(Double_t d0minBkg, Double_t d0ma
   
   TF1* ImpParBkgFunc=0x0;
   if(fBkgType==kSingleGaussExpo) {
-    ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParPrompt,d0minBkg,d0maxBkg,5,"AliDplusCharmFractionIPfitter","FunctionImpParPrompt");
+    ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,d0minBkg,d0maxBkg,5,"AliDplusCharmFractionIPfitter","FunctionImpParPrompt");
     ImpParBkgFunc->SetLineColor(kMagenta);
     ImpParBkgFunc->SetParNames("fractionGauss","mean","sigma","lambda","integral");
     ImpParBkgFunc->SetParameters(fInitParamBkg);
     ImpParBkgFunc->SetParLimits(0,0.,1.);
-    ImpParBkgFunc->SetParLimits(1,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(1,-10000000.,10000000.);
     ImpParBkgFunc->SetParLimits(2,0.,10000000.);
     ImpParBkgFunc->SetParLimits(3,0.,10000000.);
     ImpParBkgFunc->FixParameter(4,hImpParBkg->Integral()*hImpParBkg->GetBinWidth(1));
@@ -578,8 +586,44 @@ void AliDplusCharmFractionIPfitter::PrefitOnBkg(Double_t d0minBkg, Double_t d0ma
     ImpParBkgFunc->SetParameters(fInitParamBkg);
     ImpParBkgFunc->FixParameter(5,hImpParBkg->Integral()*hImpParBkg->GetBinWidth(1));
   }
+  else if(fBkgType==kSingleGaussDoubleExpo){
+    ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,d0minBkg,d0maxBkg,7,"AliDplusCharmFractionIPfitter","FunctionImpParBkg");
+    ImpParBkgFunc->SetLineColor(kMagenta);
+    ImpParBkgFunc->SetParNames("fractionGauss1","mean1","sigma1","lambda1","lambda3","fraclambda1","integral");
+    ImpParBkgFunc->SetParLimits(0,0.,1.);
+    ImpParBkgFunc->SetParLimits(1,-10000000.,10000000.);
+    ImpParBkgFunc->SetParLimits(2,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(3,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(4,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(5,0.,1.);
+    ImpParBkgFunc->SetParameters(fInitParamBkg);
+    ImpParBkgFunc->FixParameter(6,hImpParBkg->Integral()*hImpParBkg->GetBinWidth(1));
+  }
+  else if(fBkgType==kDoubleGaussDoubleExpo){
+    ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,d0minBkg,d0maxBkg,14,"AliDplusCharmFractionIPfitter","FunctionImpParBkg");
+    ImpParBkgFunc->SetLineColor(kMagenta);
+    ImpParBkgFunc->SetParNames("fractionGauss1","mean1","sigma1","lambda1","lambda3","fraclambda1","fractionGauss2","mean2","sigma2","lambda2","lambda4");
+    ImpParBkgFunc->SetParName(11,"fraclambda2");
+    ImpParBkgFunc->SetParName(12,"fractionFunc1");
+    ImpParBkgFunc->SetParName(13,"integral");
+    ImpParBkgFunc->SetParLimits(0,0.,1.);
+    ImpParBkgFunc->SetParLimits(1,-10000000.,0.);
+    ImpParBkgFunc->SetParLimits(2,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(3,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(4,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(5,0.,1.);
+    ImpParBkgFunc->SetParLimits(6,0.,1.);
+    ImpParBkgFunc->SetParLimits(7,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(8,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(9,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(10,0.,10000000.);
+    ImpParBkgFunc->SetParLimits(11,0.,1.);
+    ImpParBkgFunc->SetParLimits(12,0.,1.);
+    ImpParBkgFunc->SetParameters(fInitParamBkg);
+    ImpParBkgFunc->FixParameter(13,hImpParBkg->Integral()*hImpParBkg->GetBinWidth(1));
+  }
   else {
-    cerr << "only kSingleGaussExpo, kDoubleGaussExpo and kDoubleGaussExpoSymm are supported for the prefit on bkg distribution" << endl;
+    cerr << "only kSingleGaussExpo, kDoubleGaussExpo, kDoubleGaussExpoSymm, kSingleGaussDoubleExpo, kDoubleGaussDoubleExpo are supported for the prefit on bkg distribution" << endl;
     return;
   }
   
@@ -601,7 +645,7 @@ void AliDplusCharmFractionIPfitter::PrefitOnBkg(Double_t d0minBkg, Double_t d0ma
   fBkgMean1Err = ImpParBkgFunc->GetParError(1);
   fBkgSigma1Err = ImpParBkgFunc->GetParError(2);
   fBkgLambda1Err = ImpParBkgFunc->GetParError(3);
-  if(fBkgType==kDoubleGaussExpo) { 
+  if(fBkgType==kDoubleGaussExpo) {
     fBkgFractionGauss2 = ImpParBkgFunc->GetParameter(4);
     fBkgMean2 = ImpParBkgFunc->GetParameter(5);
     fBkgSigma2 = ImpParBkgFunc->GetParameter(6);
@@ -613,7 +657,7 @@ void AliDplusCharmFractionIPfitter::PrefitOnBkg(Double_t d0minBkg, Double_t d0ma
     fBkgLambda2Err = ImpParBkgFunc->GetParError(7);
     fBkgFracFunc1Err = ImpParBkgFunc->GetParError(8);
   }
-  if(fBkgType==kDoubleGaussExpoSymm) {
+  else if(fBkgType==kDoubleGaussExpoSymm) {
     fBkgFractionGauss2 = ImpParBkgFunc->GetParameter(0);
     fBkgMean2 = ImpParBkgFunc->GetParameter(4);
     fBkgSigma2 = ImpParBkgFunc->GetParameter(2);
@@ -622,6 +666,32 @@ void AliDplusCharmFractionIPfitter::PrefitOnBkg(Double_t d0minBkg, Double_t d0ma
     fBkgMean2Err = ImpParBkgFunc->GetParError(4);
     fBkgSigma2Err = ImpParBkgFunc->GetParError(2);
     fBkgLambda2Err = ImpParBkgFunc->GetParError(3);
+  }
+  else if(fBkgType==kSingleGaussDoubleExpo) {
+    fBkgLambda3 = ImpParBkgFunc->GetParameter(4);
+    fBkgFracLambda1 = ImpParBkgFunc->GetParameter(5);
+    fBkgLambda3Err = ImpParBkgFunc->GetParameter(4);
+    fBkgFracLambda1Err = ImpParBkgFunc->GetParameter(5);
+  }
+  else if(fBkgType==kDoubleGaussDoubleExpo) {
+    fBkgLambda3 = ImpParBkgFunc->GetParameter(4);
+    fBkgFracLambda1 = ImpParBkgFunc->GetParameter(5);
+    fBkgFractionGauss2 = ImpParBkgFunc->GetParameter(6);
+    fBkgMean2 = ImpParBkgFunc->GetParameter(7);
+    fBkgSigma2 = ImpParBkgFunc->GetParameter(8);
+    fBkgLambda2 = ImpParBkgFunc->GetParameter(9);
+    fBkgLambda4 = ImpParBkgFunc->GetParameter(10);
+    fBkgFracLambda2 = ImpParBkgFunc->GetParameter(11);
+    fBkgFracFunc1 = ImpParBkgFunc->GetParameter(12);
+    fBkgLambda3Err = ImpParBkgFunc->GetParameter(4);
+    fBkgFracLambda1Err = ImpParBkgFunc->GetParameter(5);
+    fBkgFractionGauss2Err = ImpParBkgFunc->GetParError(6);
+    fBkgMean2Err = ImpParBkgFunc->GetParError(7);
+    fBkgSigma2Err = ImpParBkgFunc->GetParError(8);
+    fBkgLambda2Err = ImpParBkgFunc->GetParError(9);
+    fBkgLambda4Err = ImpParBkgFunc->GetParameter(10);
+    fBkgFracLambda2Err = ImpParBkgFunc->GetParameter(11);
+    fBkgFracFunc1Err = ImpParBkgFunc->GetParError(12);
   }
   
   cBkg->SaveAs(Form("ImpParBkg_%0.f-%0.f.pdf",fPtMin,fPtMax));
@@ -686,7 +756,7 @@ void AliDplusCharmFractionIPfitter::GenerateEntries(Bool_t background, Int_t gen
       RecoFDFunc->SetParameter(0,1.);
     }
     else if(fFDType==kGaussExpo) {
-      RecoFDFunc = new TF1("RecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParPrompt,-1000,1000,5,"AliDplusCharmFractionIPfitter","FunctionRecoImpParPrompt");
+      RecoFDFunc = new TF1("RecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionRecoImpParFD,-1000,1000,5,"AliDplusCharmFractionIPfitter","FunctionRecoImpParPrompt");
       RecoFDFunc->SetParameters(fFDFraction1,fFDMean,fFDLambda1,fFDLambda2,1.);
     }
     else {
@@ -699,11 +769,22 @@ void AliDplusCharmFractionIPfitter::GenerateEntries(Bool_t background, Int_t gen
       BkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,1.);
     }
     else if(fBkgType==kDoubleGaussExpo || fBkgType==kDoubleGaussExpoSymm) {
-      BkgFunc = new TF1("BkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,-1000,1000,9,"AliDplusCharmFractionIPfitter","FunctionImpParBkg");
-      BkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkgFractionGauss2,fBkgMean2,fBkgSigma2,fBkgLambda2,1.);
+      BkgFunc = new TF1("BkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,-1000,1000,10,"AliDplusCharmFractionIPfitter","FunctionImpParBkg");
+      BkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkgFractionGauss2,fBkgMean2,fBkgSigma2,fBkgLambda2,fBkgFracFunc1,1.);
+    }
+    else if(fBkgType==kSingleGaussDoubleExpo) {
+      BkgFunc = new TF1("BkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,-1000,1000,7,"AliDplusCharmFractionIPfitter","FunctionImpParBkg");
+      BkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkgLambda3,fBkgFracLambda1,fBkg);
+    }
+    else if(fBkgType==kDoubleGaussDoubleExpo) {
+      BkgFunc = new TF1("BkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,-1000,1000,14,"AliDplusCharmFractionIPfitter","FunctionImpParBkg");
+      BkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkgFractionGauss2,fBkgMean2,fBkgSigma2,fBkgLambda2,fBkgFracFunc1,fBkgLambda3,fBkgFracLambda1);
+      BkgFunc->SetParameter(11,fBkgLambda4);
+      BkgFunc->SetParameter(12,fBkgFracLambda2);
+      BkgFunc->SetParameter(13,1.);
     }
     else{
-      cerr << "only kSingleGaussExpo, kDoubleGaussExpo and kDoubleGaussExpoSymm are supported for the prefit on SB distribution" << endl;
+      cerr << "only kSingleGaussExpo, kDoubleGaussExpo, kDoubleGaussExpoSymm and kSingleGaussDoubleExpo, kDoubleGaussDoubleExpo are supported for the prefit on SB distribution" << endl;
       return;
     }
   }
@@ -972,8 +1053,8 @@ void AliDplusCharmFractionIPfitter::FitHisto(Double_t d0min, Double_t d0max, Boo
     RebinVariableWidth();
     fImpParHisto->Sumw2();
     fImpParHisto->Scale(1.,"width"); ///rescales each bin for its bin width
-    fFitOptions.ReplaceAll("M","I"); ///if variable binning in the fit options MUST be "WLI"
-    if(!fFitOptions.Contains("I")) fFitOptions += "I"; ///if variable binning in the fit options MUST be "I" 
+    if(!fFitOptions.Contains("W")) {fFitOptions += "W";} ///if variable binning in the fit options MUST be "W"
+    if(!fFitOptions.Contains("M")) {fFitOptions.ReplaceAll("M","");} ///minos errors cannot be calculated if weighted
   }
   else {
     //rebin -> normalisation must take into account the binning
@@ -1024,21 +1105,116 @@ void AliDplusCharmFractionIPfitter::FitHisto(Double_t d0min, Double_t d0max, Boo
 }
 
 //_________________________________________________________________________
+void AliDplusCharmFractionIPfitter::GetPromptParameters(Double_t parprompt[5], Double_t parprompterr[5]) {
+  parprompt[0] = fPromptFractionGauss;
+  parprompt[1] = fPromptMean;
+  parprompt[2] = fPromptSigma;
+  parprompt[3] = fPromptLambda;
+  parprompt[4] = 1.;
+  parprompterr[0] = fPromptFractionGaussErr;
+  parprompterr[1] = fPromptMeanErr;
+  parprompterr[2] = fPromptSigmaErr;
+  parprompterr[3] = fPromptLambdaErr;
+  parprompterr[4] = 0.;
+}
+
+//_________________________________________________________________________
+void AliDplusCharmFractionIPfitter::GetTrueFDParameters(Double_t partrueFD[5], Double_t partrueFDerr[5]) {
+  partrueFD[0] = fFDFraction1;
+  partrueFD[1] = fFDMean;
+  partrueFD[2] = fFDLambda1;
+  partrueFD[3] = fFDLambda2;
+  partrueFD[4] = 1.;
+  partrueFDerr[0] = fFDFraction1Err;
+  partrueFDerr[1] = fFDMeanErr;
+  partrueFDerr[2] = fFDLambda1Err;
+  partrueFDerr[3] = fFDLambda2Err;
+  partrueFDerr[4] = 1.;
+}
+
+//_________________________________________________________________________
+void AliDplusCharmFractionIPfitter::GetRecoFDParameters(Double_t parrecoFD[5], Double_t parrecoFDerr[5]) {
+  parrecoFD[0] = fFDFraction1;
+  parrecoFD[1] = fFDMean;
+  parrecoFD[2] = fFDLambda1;
+  parrecoFD[3] = fFDLambda2;
+  parrecoFD[4] = 1.;
+  parrecoFDerr[0] = fFDFraction1Err;
+  parrecoFDerr[1] = fFDMeanErr;
+  parrecoFDerr[2] = fFDLambda1Err;
+  parrecoFDerr[3] = fFDLambda2Err;
+  parrecoFDerr[4] = 1.;
+}
+
+//_________________________________________________________________________
+void AliDplusCharmFractionIPfitter::GetBkgParameters(Double_t parbkg[14], Double_t parbkgerr[14]){
+  parbkg[0] = fBkgFractionGauss1;
+  parbkg[1] = fBkgMean1;
+  parbkg[2] = fBkgSigma1;
+  parbkg[3] = fBkgLambda1;
+  parbkgerr[0] = fBkgFractionGauss1Err;
+  parbkgerr[1] = fBkgMean1Err;
+  parbkgerr[2] = fBkgSigma1Err;
+  parbkgerr[3] = fBkgLambda1Err;
+  if(fBkgType<kSingleGaussDoubleExpo) {
+    parbkg[4] = fBkgFractionGauss2;
+    parbkg[5] = fBkgMean2;
+    parbkg[6] = fBkgSigma2;
+    parbkg[7] = fBkgLambda2;
+    parbkg[8] = fBkgFracFunc1;
+    parbkg[9] = 1.;
+    parbkg[10] = 0.;
+    parbkg[11] = 0.;
+    parbkg[12] = 0.;
+    parbkg[13] = 0.;
+    parbkgerr[4] = fBkgFractionGauss2Err;
+    parbkgerr[5] = fBkgMean2Err;
+    parbkgerr[6] = fBkgSigma2Err;
+    parbkgerr[7] = fBkgLambda2Err;
+    parbkgerr[8] = fBkgFracFunc1Err;
+    parbkgerr[9] = 0.;
+    parbkgerr[10] = 0.;
+    parbkgerr[11] = 0.;
+    parbkgerr[12] = 0.;
+    parbkgerr[13] = 0.;
+  }
+  else {
+    parbkg[4] = fBkgLambda3;
+    parbkg[5] = fBkgFracLambda1;
+    parbkg[6] = fBkgFractionGauss2;
+    parbkg[7] = fBkgMean2;
+    parbkg[8] = fBkgSigma2;
+    parbkg[9] = fBkgLambda2;
+    parbkg[10] = fBkgLambda4;
+    parbkg[11] = fBkgFracLambda2;
+    parbkg[12] = fBkgFracFunc1;
+    parbkg[13] = 1.;
+    parbkgerr[4] = fBkgLambda3Err;
+    parbkgerr[5] = fBkgFracLambda1Err;
+    parbkgerr[6] = fBkgFractionGauss2Err;
+    parbkgerr[7] = fBkgMean2Err;
+    parbkgerr[8] = fBkgSigma2Err;
+    parbkgerr[9] = fBkgLambda2Err;
+    parbkgerr[10] = fBkgLambda4Err;
+    parbkgerr[11] = fBkgFracLambda2Err;
+    parbkgerr[12] = fBkgFracFunc1Err;
+    parbkgerr[13] = 0.;
+  }
+}
+
+//_________________________________________________________________________
 void AliDplusCharmFractionIPfitter::SetPID(Bool_t isPIDon)
 {
   if(fDataSparse->GetNdimensions() >= fPIDAxis) {
     if(isPIDon) {
-//      if(fDataSparse) fDataSparse->GetAxis(fPIDAxis)->SetRange(fPIDbin,fPIDbin);
+      if(fDataSparse) fDataSparse->GetAxis(fPIDAxis)->SetRange(fPIDbin,fPIDbin);
       if(fMCPromptSparse) fMCPromptSparse->GetAxis(fPIDAxis)->SetRange(fPIDbin,fPIDbin);
       if(fMCTrueFDSparse) fMCTrueFDSparse->GetAxis(fPIDAxis)->SetRange(fPIDbin,fPIDbin);
       if(fMCRecoFDSparse) fMCRecoFDSparse->GetAxis(fPIDAxis)->SetRange(fPIDbin,fPIDbin);
-      if(fMCPromptSparse) fMCPromptSparse->GetAxis(11)->SetRange(16.,25.);
-      if(fMCTrueFDSparse) fMCTrueFDSparse->GetAxis(11)->SetRange(16.,25.);
-      if(fMCRecoFDSparse) fMCRecoFDSparse->GetAxis(11)->SetRange(16.,25.);
       if(fMCBkgSparse) fMCBkgSparse->GetAxis(fPIDAxis)->SetRange(fPIDbin,fPIDbin);
     }
     else {
-      //if(fDataSparse) fDataSparse->GetAxis(fPIDAxis)->SetRange(-1,-1);
+      if(fDataSparse) fDataSparse->GetAxis(fPIDAxis)->SetRange(-1,-1);
       if(fMCPromptSparse) fMCPromptSparse->GetAxis(fPIDAxis)->SetRange(-1,-1);
       if(fMCTrueFDSparse) fMCTrueFDSparse->GetAxis(fPIDAxis)->SetRange(-1,-1);
       if(fMCRecoFDSparse) fMCRecoFDSparse->GetAxis(fPIDAxis)->SetRange(-1,-1);
@@ -1063,7 +1239,7 @@ void AliDplusCharmFractionIPfitter::GetPromptFractionWithIPCut(Double_t d0cut, D
     RecoFDFunc->SetParameter(0,1.);
   }
   else if(fFDType==kGaussExpo) {
-    RecoFDFunc = new TF1("RecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParPrompt,-1000,1000,5,"AliDplusCharmFractionIPfitter","FunctionRecoImpParPrompt");
+    RecoFDFunc = new TF1("RecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionRecoImpParFD,-1000,1000,5,"AliDplusCharmFractionIPfitter","FunctionRecoImpParPrompt");
     RecoFDFunc->SetParameters(fFDFraction1,fFDMean,fFDLambda1,fFDLambda2,1.);
   }
   else {
@@ -1083,10 +1259,10 @@ void AliDplusCharmFractionIPfitter::GetPromptFractionWithIPCut(Double_t d0cut, D
     //derivatives for error propagation
     Double_t dfdfprompt = (PromptInt*(fPromptFraction*(PromptInt-RecoFDInt)+RecoFDInt)-fPromptFraction*PromptInt*(PromptInt-RecoFDInt))/((PromptInt*fPromptFraction+RecoFDInt*(1-fPromptFraction))*(PromptInt*fPromptFraction+RecoFDInt*(1-fPromptFraction)));
     
-    TF1* PropmtFuncSigmaDer = new TF1("PromptFuncSigmaDer",this,&AliDplusCharmFractionIPfitter::GaussSigmaDerivative,-1000,1000,3,"AliDplusCharmFractionIPfitter","GaussSigmaDerivative");
-    PropmtFuncSigmaDer->SetParameters(fPromptFractionGauss,fPromptMean,fPromptSigma);
-    Double_t PromptSigmaDerInt=PropmtFuncSigmaDer->Integral(-d0cut,d0cut);
-    delete PropmtFuncSigmaDer;
+    TF1* PromptFuncSigmaDer = new TF1("PromptFuncSigmaDer",this,&AliDplusCharmFractionIPfitter::GaussSigmaDerivative,-1000,1000,3,"AliDplusCharmFractionIPfitter","GaussSigmaDerivative");
+    PromptFuncSigmaDer->SetParameters(fPromptFractionGauss,fPromptMean,fPromptSigma);
+    Double_t PromptSigmaDerInt=PromptFuncSigmaDer->Integral(-d0cut,d0cut);
+    delete PromptFuncSigmaDer;
     
     Double_t RecoFDSigmaDerInt=0;
     if(fFDType==kConvolution) {
@@ -1136,6 +1312,21 @@ Double_t AliDplusCharmFractionIPfitter::FunctionImpParPrompt(Double_t* x, Double
 }
 
 //______________________________________________________________________________
+Double_t AliDplusCharmFractionIPfitter::GaussDoubleExpoDouble(Double_t* x, Double_t* par)
+{
+  Double_t d0 = x[0];
+  Double_t fractionG = par[0];
+  Double_t meanD = par[1];
+  Double_t sigma = par[2];
+  Double_t lambdaD = par[3];
+  Double_t lambdaD2 = par[4];
+  Double_t fractionExpo = par[5];
+  Double_t norm = par[6];
+  
+  return norm*((1.-fractionG)*(fractionExpo*ExpoDouble(d0,meanD,lambdaD)+(1-fractionExpo)*ExpoDouble(d0,meanD,lambdaD2))+fractionG*Gauss(d0,meanD,sigma));
+}
+
+//______________________________________________________________________________
 Double_t AliDplusCharmFractionIPfitter::FunctionTrueImpParFD(Double_t* x, Double_t* par)
 {    
   Double_t d0 = x[0];
@@ -1151,9 +1342,16 @@ Double_t AliDplusCharmFractionIPfitter::FunctionTrueImpParFD(Double_t* x, Double
 //______________________________________________________________________________
 Double_t AliDplusCharmFractionIPfitter::FunctionRecoImpParFD(Double_t *x, Double_t *par)
 {
-  Double_t norm = par[0];
-  
-  return norm*Convolution(x[0],-1000,1000,1000); 
+  if(fFDType==kConvolution) {
+    Double_t norm = par[0];
+    return norm*Convolution(x[0],-1000,1000,1000);
+  }
+  else if(fFDType==kGaussExpo) {
+    return FunctionImpParPrompt(x,par);
+  }
+  else {
+    return 0;
+  }
 }
 
 //______________________________________________________________________________
@@ -1168,34 +1366,76 @@ Double_t AliDplusCharmFractionIPfitter::FunctionImpParBkg(Double_t* x, Double_t*
   Double_t mean2=0;
   Double_t sigma2=0;
   Double_t lambda2=0;
+  Double_t lambda3=0;
+  Double_t fractionlambda1=0;
+  Double_t lambda4=0;
+  Double_t fractionlambda2=0;
   Double_t norm=0;
 
-  Double_t pars1[5] = {fractiongauss1,mean1,sigma1,lambda1,1.};
-  Double_t pars2[5];
-
-  if(fBkgType==kDoubleGaussExpoSymm) {
-    mean2=par[4];
-    norm=par[5];
-    pars2[0]=fractiongauss1;
-    pars2[1]=mean2;
-    pars2[2]=sigma1;
-    pars2[3]=lambda1;
+  if(fBkgType<kSingleGaussDoubleExpo) {
+    Double_t pars1[5] = {fractiongauss1,mean1,sigma1,lambda1,1.};
+    Double_t pars2[5];
+    
+    if(fBkgType==kSingleGaussExpo) {
+      fracfunc1 = 1;
+      norm = par[4];
+    }
+    else if(fBkgType==kDoubleGaussExpoSymm) {
+      mean2=par[4];
+      norm=par[5];
+      pars2[0]=fractiongauss1;
+      pars2[1]=mean2;
+      pars2[2]=sigma1;
+      pars2[3]=lambda1;
+      pars2[4]=1.;
+    }
+    else {
+      fractiongauss2=par[4];
+      mean2=par[5];
+      sigma2=par[6];
+      lambda2=par[7];
+      fracfunc1=par[8];
+      norm=par[9];
+      pars2[0]=fractiongauss2;
+      pars2[1]=mean2;
+      pars2[2]=sigma2;
+      pars2[3]=lambda2;
+      pars2[4]=1.;
+    }
+    return norm*(fracfunc1*FunctionImpParPrompt(x,pars1)+(1-fracfunc1)*FunctionImpParPrompt(x,pars2));
+  }
+  else if(fBkgType==kSingleGaussDoubleExpo || fBkgType==kDoubleGaussDoubleExpo){
+    lambda3=par[4];
+    fractionlambda1=par[5];
+    Double_t pars3[7] = {fractiongauss1,mean1,sigma1,lambda1,lambda3,fractionlambda1,1.};
+    Double_t pars4[7];
+    
+    if(fBkgType==kSingleGaussDoubleExpo) {
+      norm=par[6];
+      fracfunc1=1.;
+    }
+    else {
+      fractiongauss2=par[6];
+      mean2=par[7];
+      sigma2=par[8];
+      lambda2=par[9];
+      lambda4=par[10];
+      fractionlambda2=par[11];
+      fracfunc1=par[12];
+      norm=par[13];
+      pars4[0]=fractiongauss2;
+      pars4[1]=mean2;
+      pars4[2]=sigma2;
+      pars4[3]=lambda2;
+      pars4[4]=lambda4;
+      pars4[5]=fractionlambda2;
+      pars4[6]=1.;
+    }
+  return norm*(fracfunc1*GaussDoubleExpoDouble(x,pars3)+(1-fracfunc1)*GaussDoubleExpoDouble(x,pars4));
   }
   else {
-    fractiongauss2=par[4];
-    mean2=par[5];
-    sigma2=par[6];
-    lambda2=par[7];
-    fracfunc1=par[8];
-    norm=par[9];
-    pars2[0]=fractiongauss2;
-    pars2[1]=mean2;
-    pars2[2]=sigma2;
-    pars2[3]=lambda2;
+    return 0;
   }
-  pars2[4]=1.;
-  
-  return norm*(fracfunc1*FunctionImpParPrompt(x,pars1)+(1-fracfunc1)*FunctionImpParPrompt(x,pars2));
 }
 
 //_________________________________________________________________________
@@ -1228,51 +1468,64 @@ Double_t AliDplusCharmFractionIPfitter::FitFunction(Double_t* x, Double_t *par)
 
   Double_t parprompt[5] = {fPromptFractionGauss,fPromptMean,fPromptSigma,promptlambda,1.};
   Double_t parFD[5];
-  Double_t parBkg[10];
+  Double_t parBkg[14];
   parBkg[0]=fBkgFractionGauss1;
   parBkg[1]=fBkgMean1;
   parBkg[2]=fBkgSigma1;
   parBkg[3]=fBkgLambda1;
-  
-  if(fBkgType==kSingleGaussExpo && fFDType==kConvolution) {
-    parFD[0]=1.;
-    parBkg[4]=1.;
 
-    return fIntegral*((fSig/fIntegral)*(fractionPrompt*FunctionImpParPrompt(x,parprompt)+(1-fractionPrompt)*FunctionRecoImpParFD(x,parFD))+(1-fSig/fIntegral)*FunctionImpParPrompt(x,parBkg));
-  }
-  else if(fBkgType==kDoubleGaussExpo && fFDType==kConvolution) {
+  if(fFDType==kConvolution) {
     parFD[0]=1.;
-    parBkg[4]=fBkgFractionGauss2;
-    parBkg[5]=fBkgMean2;
-    parBkg[6]=fBkgSigma2;
-    parBkg[7]=fBkgLambda2;
-    parBkg[8]=fBkgFracFunc1;
-    parBkg[9]=1.;
-
-    return fIntegral*((fSig/fIntegral)*(fractionPrompt*FunctionImpParPrompt(x,parprompt)+(1-fractionPrompt)*FunctionRecoImpParFD(x,parFD))+(1-fSig/fIntegral)*FunctionImpParBkg(x,parBkg));
   }
-  else if(fBkgType==kDoubleGaussExpoSymm && fFDType==kConvolution) {
-    parFD[0]=1.;
-    parBkg[4]=fBkgMean2;
-    parBkg[5]=1.;
-
-    return fIntegral*((fSig/fIntegral)*(fractionPrompt*FunctionImpParPrompt(x,parprompt)+(1-fractionPrompt)*FunctionRecoImpParFD(x,parFD))+(1-fSig/fIntegral)*FunctionImpParBkg(x,parBkg));
-  }
-  else {
+  else if(fFDType==kGaussExpo) {
     parFD[0]=fFDFraction1;
     parFD[1]=fFDMean;
     parFD[2]=fFDLambda1;
     parFD[3]=fFDLambda2;
     parFD[4]=1.;
+  }
+  else {
+    return 0;
+  }
+
+  if(fBkgType==kSingleGaussExpo) {
+    parBkg[4]=1.;
+  }
+  else if(fBkgType==kDoubleGaussExpo) {
     parBkg[4]=fBkgFractionGauss2;
     parBkg[5]=fBkgMean2;
     parBkg[6]=fBkgSigma2;
     parBkg[7]=fBkgLambda2;
     parBkg[8]=fBkgFracFunc1;
     parBkg[9]=1.;
-
-    return fIntegral*((fSig/fIntegral)*(fractionPrompt*FunctionImpParPrompt(x,parprompt)+(1-fractionPrompt)*FunctionImpParPrompt(x,parFD))+(1-fSig/fIntegral)*FunctionImpParBkg(x,parBkg));  
   }
+  else if(fBkgType==kDoubleGaussExpoSymm) {
+    parBkg[4]=fBkgMean2;
+    parBkg[5]=1.;
+  }
+  else if(fBkgType==kSingleGaussDoubleExpo) {
+    parBkg[4]=fBkgLambda3;
+    parBkg[5]=fBkgFracLambda1;
+    parBkg[6]=1.;
+  }
+  else if(fBkgType==kDoubleGaussDoubleExpo) {
+    parBkg[4]=fBkgLambda3;
+    parBkg[5]=fBkgFracLambda1;
+    parBkg[6]=fBkgFractionGauss2;
+    parBkg[7]=fBkgMean2;
+    parBkg[8]=fBkgSigma2;
+    parBkg[9]=fBkgLambda2;
+    parBkg[10]=fBkgLambda4;
+    parBkg[11]=fBkgFracLambda2;
+    parBkg[12]=fBkgFracFunc1;
+    parBkg[13]=1.;
+  }
+  else {
+    return 0;
+  }
+  
+  return fIntegral*((fSig/fIntegral)*(fractionPrompt*FunctionImpParPrompt(x,parprompt)+(1-fractionPrompt)*FunctionRecoImpParFD(x,parFD))+(1-fSig/fIntegral)*FunctionImpParBkg(x,parBkg));
+  
 }
 
 //_________________________________________________________________________________________________
@@ -1399,7 +1652,7 @@ TH1F* AliDplusCharmFractionIPfitter::GetPtreweightedHisto(THnSparseF* sparse, In
 void AliDplusCharmFractionIPfitter::DrawResult(Bool_t isFromTree)
 {
   gStyle->SetOptFit(1);
-  gStyle->SetTextSize(0.045);
+  gStyle->SetTextSize(0.04);
   gStyle->SetTitleSize(0.05,"xy");
   gStyle->SetLabelSize(0.05,"xy");
   gStyle->SetPadLeftMargin(0.16);
@@ -1414,65 +1667,63 @@ void AliDplusCharmFractionIPfitter::DrawResult(Bool_t isFromTree)
   TF1* ImpParPromptFunc = new TF1("ImpParPromptFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParPrompt,-1000,1000,5,"ImpParPromptFunc","FunctionImpParPrompt");
   ImpParPromptFunc->SetParameters(fPromptFractionGauss,fPromptMean,fPromptSigma,fPromptLambda,fPromptFraction*fSig);
   ImpParPromptFunc->SetLineColor(kGreen+3);
+  TF1* ImpParTotFunc = new TF1("ImpParTotFunc",this,&AliDplusCharmFractionIPfitter::FitFunction,-1000,1000,2,"ImpParTotFunc","FitFunction");
+  ImpParTotFunc->SetParameters(fPromptFraction,fPromptSigma);
   
   TF1* ImpParBkgFunc = 0x0;
-  TF1* ImpParTotFunc = 0x0;
   TF1* ImpParRecoFDFunc = 0x0;
   
-  if(fFDType==kConvolution && fBkgType==kSingleGaussExpo) {
+  if(fFDType==kConvolution) {
     ImpParRecoFDFunc = new TF1("ImpParRecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionRecoImpParFD,-1000,1000,1,"ImpParRecoFDFunc","FunctionRecoImpParFD");
     ImpParRecoFDFunc->SetParameter(0,fSig*(1-fPromptFraction));
-    
-    ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParPrompt,-1000,1000,5,"ImpParBkgFunc","FunctionImpParPrompt");
-    ImpParBkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkg);
-    
-    ImpParTotFunc = new TF1("ImpParTotFunc",this,&AliDplusCharmFractionIPfitter::FitFunction,-1000,1000,2,"ImpParTotFunc","FitFunction");
   }
-  else if(fFDType==kConvolution && fBkgType==kDoubleGaussExpo) {
-    ImpParRecoFDFunc = new TF1("ImpParRecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionRecoImpParFD,-1000,1000,1,"ImpParRecoFDFunc","FunctionRecoImpParFD");
-    ImpParRecoFDFunc->SetParameter(0,fSig*(1-fPromptFraction));
-    
+  else if(fFDType==kGaussExpo) {
+    ImpParRecoFDFunc = new TF1("ImpParRecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionRecoImpParFD,-1000,1000,5,"ImpParRecoFDFunc","FunctionRecoImpParPrompt");
+    ImpParRecoFDFunc->SetParameters(fFDFraction1,fFDMean,fFDLambda1,fFDLambda2,fSig*(1-fPromptFraction));
+  }
+  
+  if(fBkgType==kSingleGaussExpo) {
+    ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,-1000,1000,5,"ImpParBgkFunc","FunctionImpParBkg");
+    ImpParBkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkgFractionGauss2,fBkg);
+  }
+  else if(fBkgType==kDoubleGaussExpo) {
     ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,-1000,1000,10,"ImpParBgkFunc","FunctionImpParBkg");
     ImpParBkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkgFractionGauss2,fBkgMean2,fBkgSigma2,fBkgLambda2,fBkgFracFunc1,fBkg);
-    ImpParTotFunc = new TF1("ImpParTotFunc",this,&AliDplusCharmFractionIPfitter::FitFunction,-1000,1000,2,"ImpParTotFunc","FitFunction");
   }
-  else if(fFDType==kConvolution && fBkgType==kDoubleGaussExpoSymm) {
-    ImpParRecoFDFunc = new TF1("ImpParRecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionRecoImpParFD,-1000,1000,1,"ImpParRecoFDFunc","FunctionRecoImpParFD");
-    ImpParRecoFDFunc->SetParameter(0,fSig*(1-fPromptFraction));
-    
+  else if(fBkgType==kDoubleGaussExpoSymm) {
     ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,-1000,1000,6,"ImpParBgkFunc","FunctionImpParBkg");
     ImpParBkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkgMean2,fBkg);
-    ImpParTotFunc = new TF1("ImpParTotFunc",this,&AliDplusCharmFractionIPfitter::FitFunction,-1000,1000,2,"ImpParTotFunc","FitFunction");
   }
-  else {
-    ImpParRecoFDFunc = new TF1("ImpParRecoFDFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParPrompt,-1000,1000,5,"ImpParRecoFDFunc","FunctionRecoImpParPrompt");
-    ImpParRecoFDFunc->SetParameters(fFDFraction1,fFDMean,fFDLambda1,fFDLambda2,fSig*(1-fPromptFraction));
-    
-    ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,-1000,1000,9,"ImpParBkgFunc","FunctionImpParBkg");
-    ImpParBkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkgFractionGauss2,fBkgMean2,fBkgSigma2,fBkgLambda2,fBkg);
-    ImpParTotFunc = new TF1("ImpParTotFunc",this,&AliDplusCharmFractionIPfitter::FitFunction,-1000,1000,2,"ImpParTotFunc","FitFunction");
-  }        
-  
-  ImpParTotFunc->SetParameters(fPromptFraction,fPromptSigma);
+  else if(fBkgType==kSingleGaussDoubleExpo) {
+    ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,-1000,1000,7,"ImpParBgkFunc","FunctionImpParBkg");
+    ImpParBkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkgLambda3,fBkgFracLambda1,fBkg);
+  }
+  else if(fBkgType==kDoubleGaussDoubleExpo) {
+    ImpParBkgFunc = new TF1("ImpParBkgFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParBkg,-1000,1000,14,"ImpParBgkFunc","FunctionImpParBkg");
+    ImpParBkgFunc->SetParameters(fBkgFractionGauss1,fBkgMean1,fBkgSigma1,fBkgLambda1,fBkgLambda3,fBkgFracLambda1,fBkgFractionGauss2,fBkgMean2,fBkgSigma2,fBkgLambda2,fBkgLambda4);
+    ImpParBkgFunc->SetParameter(11,fBkgFracLambda2);
+    ImpParBkgFunc->SetParameter(12,fBkgFracFunc1);
+    ImpParBkgFunc->SetParameter(13,fBkg);
+  }
 
   ImpParPromptFunc->SetNpx(500);
-  ImpParRecoFDFunc->SetNpx(500);
-  ImpParBkgFunc->SetNpx(500);
+  if(ImpParRecoFDFunc) {ImpParRecoFDFunc->SetNpx(500);}
+  if(ImpParBkgFunc) {ImpParBkgFunc->SetNpx(500);}
   ImpParTotFunc->SetNpx(500);
   
   ImpParPromptFunc->SetLineColor(kGreen+3);
-  ImpParRecoFDFunc->SetLineColor(kBlue);
-  ImpParBkgFunc->SetLineColor(kMagenta);
+  if(ImpParRecoFDFunc) {ImpParRecoFDFunc->SetLineColor(kBlue);}
+  if(ImpParBkgFunc) {ImpParBkgFunc->SetLineColor(kMagenta);}
   ImpParTotFunc->SetLineColor(kRed);
 
   ImpParPromptFunc->SetLineWidth(2);
-  ImpParRecoFDFunc->SetLineWidth(2);
-  ImpParBkgFunc->SetLineWidth(2);
+  if(ImpParRecoFDFunc) {ImpParRecoFDFunc->SetLineWidth(2);}
+  if(ImpParBkgFunc) {ImpParBkgFunc->SetLineWidth(2);}
   ImpParTotFunc->SetLineWidth(2);
 
   ImpParPromptFunc->SetLineStyle(7);
-  ImpParRecoFDFunc->SetLineStyle(10);
-  ImpParBkgFunc->SetLineStyle(9);
+  if(ImpParRecoFDFunc) {ImpParRecoFDFunc->SetLineStyle(10);}
+  if(ImpParBkgFunc) {ImpParBkgFunc->SetLineStyle(9);}
   
   TCanvas *cFit = new TCanvas("cFit","",900,900);
   cFit->SetLogy();
@@ -1517,9 +1768,8 @@ void AliDplusCharmFractionIPfitter::DrawResult(Bool_t isFromTree)
   fImpParHisto->GetXaxis()->SetNdivisions(505);
   ImpParTotFunc->Draw("same");
   ImpParPromptFunc->Draw("same");
-  ImpParRecoFDFunc->Draw("same");
-  if(!fSubBkg)
-    ImpParBkgFunc->Draw("same");
+  if(ImpParRecoFDFunc) {ImpParRecoFDFunc->Draw("same");}
+  if(!fSubBkg && ImpParBkgFunc) {ImpParBkgFunc->Draw("same");}
   
   TFile *outfile = 0x0;
   TString filename;
@@ -1543,14 +1793,14 @@ void AliDplusCharmFractionIPfitter::DrawResult(Bool_t isFromTree)
   cFit->Write();
   fImpParHisto->Write();
   ImpParPromptFunc->Write();
-  ImpParRecoFDFunc->Write();
-  ImpParBkgFunc->Write();
+  if(ImpParRecoFDFunc) {ImpParRecoFDFunc->Write();}
+  if(ImpParBkgFunc) {ImpParBkgFunc->Write();}
   ImpParTotFunc->Write();
   outfile->Close();
 
   delete ImpParPromptFunc;
-  delete ImpParRecoFDFunc;
-  delete ImpParBkgFunc;
+  if(ImpParRecoFDFunc) {delete ImpParRecoFDFunc;}
+  if(ImpParBkgFunc) {delete ImpParBkgFunc;}
   delete ImpParTotFunc;
   delete cFit;
   
