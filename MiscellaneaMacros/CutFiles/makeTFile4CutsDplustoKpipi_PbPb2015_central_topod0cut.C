@@ -213,7 +213,7 @@ void makeTFile4CutsDplustoKpipi_010_kAny(){
   
   analysiscuts->PrintAll();
   analysiscuts->PrintTrigger();
-  TFile* fout=new TFile("DplustoKpipiCuts_010_central_d0cut_kINT7.root","recreate");
+  TFile* fout=new TFile("DplustoKpipiCuts_010_central_topod0cut_kINT7.root","recreate");
   fout->cd();
   analysiscuts->Write();
   fout->Close();
@@ -412,7 +412,7 @@ void makeTFile4CutsDplustoKpipi_020_kAny(){
   
   analysiscuts->PrintAll();
   analysiscuts->PrintTrigger();
-  TFile* fout=new TFile("DplustoKpipiCuts_020_central_d0cut_kINT7.root","recreate");
+  TFile* fout=new TFile("DplustoKpipiCuts_020_central_topod0cut_kINT7.root","recreate");
   fout->cd();
   analysiscuts->Write();
   fout->Close();
@@ -588,9 +588,9 @@ void makeTFile4CutsDplustoKpipi_2040_kAny(){
   anacutsval[ic][13]=0.970;
   anacutsval[ic][14]=0.950;
   
-  Float_t *d0cutsval=new Float_t[nptbins];
-  for(Int_t ipt=0;ipt<nptbins;ipt++){ //d0
-    d0cutsval[ipt]=80;
+  Float_t *d0d0expcutsval=new Float_t[nptbins];
+  for(Int_t ipt=0;ipt<nptbins;ipt++){ //d0d0exp
+    d0d0expcutsval[ipt]=2.5;
   }
   
   AliRDHFCutsDplustoKpipi* analysiscuts=new AliRDHFCutsDplustoKpipi();
@@ -598,7 +598,7 @@ void makeTFile4CutsDplustoKpipi_2040_kAny(){
   analysiscuts->SetTitle("Cuts for Dplus Analysis and CF");
   analysiscuts->SetPtBins(nptbins+1,ptbins);
   analysiscuts->SetCuts(nvars,nptbins,anacutsval);
-  analysiscuts->Setd0Cut(nptbins,d0cutsval);
+  analysiscuts->Setd0MeasMinusExpCut(nptbins,d0d0expcutsval);
   analysiscuts->AddTrackCuts(esdTrackCuts);
   analysiscuts->SetScaleNormDLxyBypOverPt(kFALSE);
   //   AliAODPidHF* pidHF=(AliAODPidHF*)analysiscuts->GetPidHF();
@@ -632,7 +632,7 @@ void makeTFile4CutsDplustoKpipi_2040_kAny(){
   
   analysiscuts->PrintAll();
   analysiscuts->PrintTrigger();
-  TFile* fout=new TFile("DplustoKpipiCuts_2040_central_d0cut_kINT7.root","recreate");
+  TFile* fout=new TFile("DplustoKpipiCuts_2040_central_topod0cut_kINT7.root","recreate");
   fout->cd();
   analysiscuts->Write();
   fout->Close();
@@ -809,6 +809,16 @@ void makeTFile4CutsDplustoKpipi_3050_kAny(){
   anacutsval[ic][13]=0.970;
   anacutsval[ic][14]=0.950;
   
+  Float_t *d0d0expcutsval=new Float_t[nptbins];
+  for(Int_t ipt=0;ipt<nptbins;ipt++){ //d0d0exp
+    d0d0expcutsval[ipt]=2.5;
+  }
+  d0d0expcutsval[0]=1.5;
+  d0d0expcutsval[1]=1.5;
+  d0d0expcutsval[2]=2.0;
+  d0d0expcutsval[3]=2.0;
+  d0d0expcutsval[14]=3.0;
+  
   Float_t *d0cutsval=new Float_t[nptbins];
   for(Int_t ipt=0;ipt<nptbins;ipt++){ //d0
     d0cutsval[ipt]=60;
@@ -824,6 +834,7 @@ void makeTFile4CutsDplustoKpipi_3050_kAny(){
   analysiscuts->SetTitle("Cuts for Dplus Analysis and CF");
   analysiscuts->SetPtBins(nptbins+1,ptbins);
   analysiscuts->SetCuts(nvars,nptbins,anacutsval);
+  analysiscuts->Setd0MeasMinusExpCut(nptbins,d0d0expcutsval);
   analysiscuts->Setd0Cut(nptbins,d0cutsval);
   analysiscuts->AddTrackCuts(esdTrackCuts);
   analysiscuts->SetScaleNormDLxyBypOverPt(kFALSE);
@@ -860,7 +871,7 @@ void makeTFile4CutsDplustoKpipi_3050_kAny(){
   
   analysiscuts->PrintAll();
   analysiscuts->PrintTrigger();
-  TFile* fout=new TFile("DplustoKpipiCuts_3050_central_d0cut_kINT7.root","recreate");
+  TFile* fout=new TFile("DplustoKpipiCuts_3050_central_topod0cut_kINT7.root","recreate");
   fout->cd();
   analysiscuts->Write();
   fout->Close();
@@ -1057,7 +1068,7 @@ void makeTFile4CutsDplustoKpipi_6080_kAny(){
   
   analysiscuts->PrintAll();
   analysiscuts->PrintTrigger();
-  TFile* fout=new TFile("DplustoKpipiCuts_6080_central_d0cut_kINT7.root","recreate");
+  TFile* fout=new TFile("DplustoKpipiCuts_6080_central_topod0cut_kINT7.root","recreate");
   fout->cd();
   analysiscuts->Write();
   fout->Close();

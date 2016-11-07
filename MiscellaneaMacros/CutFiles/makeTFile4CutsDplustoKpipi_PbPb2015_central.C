@@ -699,7 +699,7 @@ void makeTFile4CutsDplustoKpipi_3050_kAny(){
   }
   
   ic=6;//sigvert
-  anacutsval[ic][0]=0.022;
+  anacutsval[ic][0]=0.020;
   anacutsval[ic][1]=0.022;
   anacutsval[ic][2]=0.022;
   anacutsval[ic][3]=0.022;
@@ -717,11 +717,12 @@ void makeTFile4CutsDplustoKpipi_3050_kAny(){
   
   ic=7;//declen
   for(Int_t ipt=0;ipt<nptbins;ipt++){
-    anacutsval[ic][ipt]=0.10;
+    anacutsval[ic][ipt]=0.12;
   }
-  anacutsval[ic][12]=0.15;
-  anacutsval[ic][13]=0.15;
-  anacutsval[ic][14]=0.15;
+  anacutsval[ic][0]=0.08;
+  anacutsval[ic][12]=0.16;
+  anacutsval[ic][13]=0.16;
+  anacutsval[ic][14]=0.16;
   
   ic=8;//pM
   for(Int_t ipt=0;ipt<nptbins;ipt++){
@@ -759,8 +760,8 @@ void makeTFile4CutsDplustoKpipi_3050_kAny(){
   ic=12;//ndlXY
   anacutsval[ic][0]=12.;
   anacutsval[ic][1]=12.;
-  anacutsval[ic][2]=10.;
-  anacutsval[ic][3]=10.;
+  anacutsval[ic][2]=12.;
+  anacutsval[ic][3]=12.;
   anacutsval[ic][4]=10.;
   anacutsval[ic][5]=10.;
   anacutsval[ic][6]=10.;
@@ -770,7 +771,7 @@ void makeTFile4CutsDplustoKpipi_3050_kAny(){
   anacutsval[ic][10]=9.;
   anacutsval[ic][11]=9.;
   anacutsval[ic][12]=8.;
-  anacutsval[ic][13]=6.;
+  anacutsval[ic][13]=8.;
   anacutsval[ic][14]=6.;
   
   ic=13;//cospXY
