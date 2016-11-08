@@ -7,31 +7,21 @@
 //macro to make a .root file which contains an AliRDHFCutsDplustoKpipi with loose set of cuts (for significance maximization) and TParameter with the tighest value of these cuts
 //Needed for AliAnalysisTaskSEDplus, AliCFTaskVertexingHF3Prong, AliAnalysisTaskSESignificance
 
-//Use:
-//Set hard coded commented with //set this!!
-
-//.L makeTFile4CutsDplustoKpipi.C
-// makeInputAliAnalysisTaskSEDplus()
-// makeInputAliAnalysisTaskSESignificanceMaximization()
-
-void makeTFile4CutsDplustoKpipi_010_kAny();
-void makeTFile4CutsDplustoKpipi_010_kAny();
-void makeTFile4CutsDplustoKpipi_2040_kAny();
-void makeTFile4CutsDplustoKpipi_3050_kAny();
-void makeTFile4CutsDplustoKpipi_6080_kAny();
-
+void makeTFile4CutsDplustoKpipi_010(Bool_t fUseMC=kFALSE);
+void makeTFile4CutsDplustoKpipi_010(Bool_t fUseMC=kFALSE);
+void makeTFile4CutsDplustoKpipi_2040(Bool_t fUseMC=kFALSE);
+void makeTFile4CutsDplustoKpipi_3050(Bool_t fUseMC=kFALSE);
+void makeTFile4CutsDplustoKpipi_6080(Bool_t fUseMC=kFALSE);
 
 //__________________________________________________________________________________________
-void makeTFile4CutsDplustoKpipi_010_kAny(){
-  
-  //  gSystem->SetIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/include -I$ALICE_ROOT/ITS -I$ALICE_ROOT/TPC -I$ALICE_ROOT/CONTAINERS -I$ALICE_ROOT/STEER -I$ALICE_ROOT/TRD -I$ALICE_ROOT/macros -I$ALICE_ROOT/ANALYSIS -I$ALICE_ROOT/PWG3 -I$ALICE_ROOT/PWG3/vertexingHF -I$ALICE_ROOT/PWG3/vertexingH/macros -g");
-  
+void makeTFile4CutsDplustoKpipi_010(Bool_t fUseMC){
+
   AliESDtrackCuts* esdTrackCuts=new AliESDtrackCuts();
   esdTrackCuts->SetRequireSigmaToVertex(kFALSE);
   //default
   esdTrackCuts->SetRequireTPCRefit(kTRUE);
   esdTrackCuts->SetRequireITSRefit(kTRUE);
-  //esdTrackCuts->SetMinNClustersITS(4); // default is 5
+  //esdTrackCuts->SetMinNClustersITS(4); 
   esdTrackCuts->SetMinNClustersTPC(70);
   esdTrackCuts->SetMinRatioCrossedRowsOverFindableClustersTPC(0.8);
   esdTrackCuts->SetClusterRequirementITS(AliESDtrackCuts::kSPD,
@@ -195,9 +185,16 @@ void makeTFile4CutsDplustoKpipi_010_kAny(){
   
   cent=Form("%.0f%.0f",minc,maxc);
   analysiscuts->SetUseCentrality(AliRDHFCuts::kCentV0M); //kCentOff,kCentV0M,kCentTRK,kCentTKL,kCentCL1,kCentInvalid
-  analysiscuts->SetTriggerClass("");//dont use for ppMB/ppMB_MC
-  analysiscuts->ResetMaskAndEnableMBTrigger();//dont use for ppMB/ppMB_MC
-  analysiscuts->SetTriggerMask(AliVEvent::kINT7);
+  if(fUseMC) {
+    analysiscuts->SetTriggerClass("");
+    analysiscuts->ResetMaskAndEnableMBTrigger();
+    analysiscuts->SetTriggerMask(AliVEvent::kMB);
+  }
+  else {
+    analysiscuts->SetTriggerClass("");//dont use for ppMB/ppMB_MC
+    analysiscuts->ResetMaskAndEnableMBTrigger();//dont use for ppMB/ppMB_MC
+    analysiscuts->SetTriggerMask(AliVEvent::kINT7);
+  }
   
   // analysiscuts->EnableSemiCentralTrigger();
   analysiscuts->SetMinPtCandidate(2.);
@@ -207,7 +204,9 @@ void makeTFile4CutsDplustoKpipi_010_kAny(){
   
   analysiscuts->PrintAll();
   analysiscuts->PrintTrigger();
-  TFile* fout=new TFile("DplustoKpipiCuts_010_central_kINT7.root","recreate");
+  TString filename="DplustoKpipiCuts_010_central_kINT7.root";
+  if(fUseMC) filename="DplustoKpipiCuts_010_central_MC.root";
+  TFile* fout=new TFile(filename.Data(),"RECREATE");
   fout->cd();
   analysiscuts->Write();
   fout->Close();
@@ -215,16 +214,14 @@ void makeTFile4CutsDplustoKpipi_010_kAny(){
 }
 
 //__________________________________________________________________________________________
-void makeTFile4CutsDplustoKpipi_020_kAny(){
-  
-  //  gSystem->SetIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/include -I$ALICE_ROOT/ITS -I$ALICE_ROOT/TPC -I$ALICE_ROOT/CONTAINERS -I$ALICE_ROOT/STEER -I$ALICE_ROOT/TRD -I$ALICE_ROOT/macros -I$ALICE_ROOT/ANALYSIS -I$ALICE_ROOT/PWG3 -I$ALICE_ROOT/PWG3/vertexingHF -I$ALICE_ROOT/PWG3/vertexingH/macros -g");
+void makeTFile4CutsDplustoKpipi_020(Bool_t fUseMC){
   
   AliESDtrackCuts* esdTrackCuts=new AliESDtrackCuts();
   esdTrackCuts->SetRequireSigmaToVertex(kFALSE);
   //default
   esdTrackCuts->SetRequireTPCRefit(kTRUE);
   esdTrackCuts->SetRequireITSRefit(kTRUE);
-  //esdTrackCuts->SetMinNClustersITS(4); // default is 5
+  //esdTrackCuts->SetMinNClustersITS(4); 
   esdTrackCuts->SetMinNClustersTPC(70);
   esdTrackCuts->SetMinRatioCrossedRowsOverFindableClustersTPC(0.8);
   esdTrackCuts->SetClusterRequirementITS(AliESDtrackCuts::kSPD,
@@ -388,9 +385,16 @@ void makeTFile4CutsDplustoKpipi_020_kAny(){
   
   cent=Form("%.0f%.0f",minc,maxc);
   analysiscuts->SetUseCentrality(AliRDHFCuts::kCentV0M); //kCentOff,kCentV0M,kCentTRK,kCentTKL,kCentCL1,kCentInvalid
-  analysiscuts->SetTriggerClass("");//dont use for ppMB/ppMB_MC
-  analysiscuts->ResetMaskAndEnableMBTrigger();//dont use for ppMB/ppMB_MC
-  analysiscuts->SetTriggerMask(AliVEvent::kINT7);
+  if(fUseMC) {
+    analysiscuts->SetTriggerClass("");
+    analysiscuts->ResetMaskAndEnableMBTrigger();
+    analysiscuts->SetTriggerMask(AliVEvent::kMB);
+  }
+  else {
+    analysiscuts->SetTriggerClass("");//dont use for ppMB/ppMB_MC
+    analysiscuts->ResetMaskAndEnableMBTrigger();//dont use for ppMB/ppMB_MC
+    analysiscuts->SetTriggerMask(AliVEvent::kINT7);
+  }
   
   // analysiscuts->EnableSemiCentralTrigger();
   analysiscuts->SetMinPtCandidate(2.);
@@ -400,7 +404,9 @@ void makeTFile4CutsDplustoKpipi_020_kAny(){
   
   analysiscuts->PrintAll();
   analysiscuts->PrintTrigger();
-  TFile* fout=new TFile("DplustoKpipiCuts_020_central_kINT7.root","recreate");
+  TString filename="DplustoKpipiCuts_020_central_kINT7.root";
+  if(fUseMC) filename="DplustoKpipiCuts_020_central_MC.root";
+  TFile* fout=new TFile(filename.Data(),"RECREATE");
   fout->cd();
   analysiscuts->Write();
   fout->Close();
@@ -408,16 +414,14 @@ void makeTFile4CutsDplustoKpipi_020_kAny(){
 }
 
 //__________________________________________________________________________________________
-void makeTFile4CutsDplustoKpipi_2040_kAny(){
-  
-  //  gSystem->SetIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/include -I$ALICE_ROOT/ITS -I$ALICE_ROOT/TPC -I$ALICE_ROOT/CONTAINERS -I$ALICE_ROOT/STEER -I$ALICE_ROOT/TRD -I$ALICE_ROOT/macros -I$ALICE_ROOT/ANALYSIS -I$ALICE_ROOT/PWG3 -I$ALICE_ROOT/PWG3/vertexingHF -I$ALICE_ROOT/PWG3/vertexingH/macros -g");
+void makeTFile4CutsDplustoKpipi_2040(Bool_t fUseMC){
   
   AliESDtrackCuts* esdTrackCuts=new AliESDtrackCuts();
   esdTrackCuts->SetRequireSigmaToVertex(kFALSE);
   //default
   esdTrackCuts->SetRequireTPCRefit(kTRUE);
   esdTrackCuts->SetRequireITSRefit(kTRUE);
-  //esdTrackCuts->SetMinNClustersITS(4); // default is 5
+  //esdTrackCuts->SetMinNClustersITS(4); 
   esdTrackCuts->SetMinNClustersTPC(70);
   esdTrackCuts->SetMinRatioCrossedRowsOverFindableClustersTPC(0.8);
   esdTrackCuts->SetClusterRequirementITS(AliESDtrackCuts::kSPD,
@@ -602,9 +606,16 @@ void makeTFile4CutsDplustoKpipi_2040_kAny(){
   
   cent=Form("%.0f%.0f",minc,maxc);
   analysiscuts->SetUseCentrality(AliRDHFCuts::kCentV0M); //kCentOff,kCentV0M,kCentTRK,kCentTKL,kCentCL1,kCentInvalid
-  analysiscuts->SetTriggerClass("");//dont use for ppMB/ppMB_MC
-  analysiscuts->ResetMaskAndEnableMBTrigger();//dont use for ppMB/ppMB_MC
-  analysiscuts->SetTriggerMask(AliVEvent::kINT7);
+  if(fUseMC) {
+    analysiscuts->SetTriggerClass("");
+    analysiscuts->ResetMaskAndEnableMBTrigger();
+    analysiscuts->SetTriggerMask(AliVEvent::kMB);
+  }
+  else {
+    analysiscuts->SetTriggerClass("");//dont use for ppMB/ppMB_MC
+    analysiscuts->ResetMaskAndEnableMBTrigger();//dont use for ppMB/ppMB_MC
+    analysiscuts->SetTriggerMask(AliVEvent::kINT7);
+  }
   
   // analysiscuts->EnableSemiCentralTrigger();
   analysiscuts->SetMinPtCandidate(2.);
@@ -614,7 +625,9 @@ void makeTFile4CutsDplustoKpipi_2040_kAny(){
   
   analysiscuts->PrintAll();
   analysiscuts->PrintTrigger();
-  TFile* fout=new TFile("DplustoKpipiCuts_2040_central_kINT7.root","recreate");
+  TString filename="DplustoKpipiCuts_2040_central_kINT7.root";
+  if(fUseMC) filename="DplustoKpipiCuts_2040_central_MC.root";
+  TFile* fout=new TFile(filename.Data(),"RECREATE");
   fout->cd();
   analysiscuts->Write();
   fout->Close();
@@ -622,16 +635,14 @@ void makeTFile4CutsDplustoKpipi_2040_kAny(){
 }
 
 //__________________________________________________________________________________________
-void makeTFile4CutsDplustoKpipi_3050_kAny(){
-  
-  //  gSystem->SetIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/include -I$ALICE_ROOT/ITS -I$ALICE_ROOT/TPC -I$ALICE_ROOT/CONTAINERS -I$ALICE_ROOT/STEER -I$ALICE_ROOT/TRD -I$ALICE_ROOT/macros -I$ALICE_ROOT/ANALYSIS -I$ALICE_ROOT/PWG3 -I$ALICE_ROOT/PWG3/vertexingHF -I$ALICE_ROOT/PWG3/vertexingH/macros -g");
+void makeTFile4CutsDplustoKpipi_3050(Bool_t fUseMC){
   
   AliESDtrackCuts* esdTrackCuts=new AliESDtrackCuts();
   esdTrackCuts->SetRequireSigmaToVertex(kFALSE);
   //default
   esdTrackCuts->SetRequireTPCRefit(kTRUE);
   esdTrackCuts->SetRequireITSRefit(kTRUE);
-  //esdTrackCuts->SetMinNClustersITS(4); // default is 5
+  //esdTrackCuts->SetMinNClustersITS(4); 
   esdTrackCuts->SetMinNClustersTPC(70);
   esdTrackCuts->SetMinRatioCrossedRowsOverFindableClustersTPC(0.8);
   esdTrackCuts->SetClusterRequirementITS(AliESDtrackCuts::kSPD,
@@ -819,9 +830,16 @@ void makeTFile4CutsDplustoKpipi_3050_kAny(){
   
   cent=Form("%.0f%.0f",minc,maxc);
   analysiscuts->SetUseCentrality(AliRDHFCuts::kCentV0M); //kCentOff,kCentV0M,kCentTRK,kCentTKL,kCentCL1,kCentInvalid
-  analysiscuts->SetTriggerClass("");//dont use for ppMB/ppMB_MC
-  analysiscuts->ResetMaskAndEnableMBTrigger();//dont use for ppMB/ppMB_MC
-  analysiscuts->SetTriggerMask(AliVEvent::kINT7);
+  if(fUseMC) {
+    analysiscuts->SetTriggerClass("");
+    analysiscuts->ResetMaskAndEnableMBTrigger();
+    analysiscuts->SetTriggerMask(AliVEvent::kMB);
+  }
+  else {
+    analysiscuts->SetTriggerClass("");//dont use for ppMB/ppMB_MC
+    analysiscuts->ResetMaskAndEnableMBTrigger();//dont use for ppMB/ppMB_MC
+    analysiscuts->SetTriggerMask(AliVEvent::kINT7);
+  }
   
   // analysiscuts->EnableSemiCentralTrigger();
   analysiscuts->SetMinPtCandidate(2.);
@@ -831,7 +849,9 @@ void makeTFile4CutsDplustoKpipi_3050_kAny(){
   
   analysiscuts->PrintAll();
   analysiscuts->PrintTrigger();
-  TFile* fout=new TFile("DplustoKpipiCuts_3050_central_kINT7.root","recreate");
+  TString filename="DplustoKpipiCuts_3050_central_kINT7.root";
+  if(fUseMC) filename="DplustoKpipiCuts_3050_central_MC.root";
+  TFile* fout=new TFile(filename.Data(),"RECREATE");
   fout->cd();
   analysiscuts->Write();
   fout->Close();
@@ -839,16 +859,14 @@ void makeTFile4CutsDplustoKpipi_3050_kAny(){
 }
 
 //__________________________________________________________________________________________
-void makeTFile4CutsDplustoKpipi_6080_kAny(){
-  
-  //  gSystem->SetIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/include -I$ALICE_ROOT/ITS -I$ALICE_ROOT/TPC -I$ALICE_ROOT/CONTAINERS -I$ALICE_ROOT/STEER -I$ALICE_ROOT/TRD -I$ALICE_ROOT/macros -I$ALICE_ROOT/ANALYSIS -I$ALICE_ROOT/PWG3 -I$ALICE_ROOT/PWG3/vertexingHF -I$ALICE_ROOT/PWG3/vertexingH/macros -g");
+void makeTFile4CutsDplustoKpipi_6080(Bool_t fUseMC){
   
   AliESDtrackCuts* esdTrackCuts=new AliESDtrackCuts();
   esdTrackCuts->SetRequireSigmaToVertex(kFALSE);
   //default
   esdTrackCuts->SetRequireTPCRefit(kTRUE);
   esdTrackCuts->SetRequireITSRefit(kTRUE);
-  //esdTrackCuts->SetMinNClustersITS(4); // default is 5
+  //esdTrackCuts->SetMinNClustersITS(4); 
   esdTrackCuts->SetMinNClustersTPC(70);
   esdTrackCuts->SetMinRatioCrossedRowsOverFindableClustersTPC(0.8);
   esdTrackCuts->SetClusterRequirementITS(AliESDtrackCuts::kSPD,
@@ -1010,9 +1028,16 @@ void makeTFile4CutsDplustoKpipi_6080_kAny(){
   
   cent=Form("%.0f%.0f",minc,maxc);
   analysiscuts->SetUseCentrality(AliRDHFCuts::kCentV0M); //kCentOff,kCentV0M,kCentTRK,kCentTKL,kCentCL1,kCentInvalid
-  analysiscuts->SetTriggerClass("");//dont use for ppMB/ppMB_MC
-  analysiscuts->ResetMaskAndEnableMBTrigger();//dont use for ppMB/ppMB_MC
-  analysiscuts->SetTriggerMask(AliVEvent::kINT7);
+  if(fUseMC) {
+    analysiscuts->SetTriggerClass("");
+    analysiscuts->ResetMaskAndEnableMBTrigger();
+    analysiscuts->SetTriggerMask(AliVEvent::kMB);
+  }
+  else {
+    analysiscuts->SetTriggerClass("");//dont use for ppMB/ppMB_MC
+    analysiscuts->ResetMaskAndEnableMBTrigger();//dont use for ppMB/ppMB_MC
+    analysiscuts->SetTriggerMask(AliVEvent::kINT7);
+  }
   
   // analysiscuts->EnableSemiCentralTrigger();
   analysiscuts->SetMinPtCandidate(2.);
@@ -1022,7 +1047,9 @@ void makeTFile4CutsDplustoKpipi_6080_kAny(){
   
   analysiscuts->PrintAll();
   analysiscuts->PrintTrigger();
-  TFile* fout=new TFile("DplustoKpipiCuts_6080_central_kINT7.root","recreate");
+  TString filename="DplustoKpipiCuts_6080_central_kINT7.root";
+  if(fUseMC) filename="DplustoKpipiCuts_6080_central_MC.root";
+  TFile* fout=new TFile(filename.Data(),"RECREATE");
   fout->cd();
   analysiscuts->Write();
   fout->Close();
