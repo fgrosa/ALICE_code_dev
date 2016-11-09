@@ -1,7 +1,7 @@
 class AliAnalysisGrid;
 class AliAnalysisAlien;
 
-void RunAnalysisAODVertexingDplus(Bool_t fUseMC = kFALSE)
+void RunAnalysisAODVertexingDplus(Bool_t fUseMC = kFALSE, TString pluginmode="full")
 {
     //
     // Test macro for AliAnalysisTaskSE's for heavy-flavour candidates
@@ -15,19 +15,17 @@ void RunAnalysisAODVertexingDplus(Bool_t fUseMC = kFALSE)
     //
 
     gSystem->AddIncludePath("-I. -I$ROOTSYS/include -I$ALICE_PHYSICS/include -g");
-    //gSystem->SetIncludePath("-I. -I$ROOTSYS/include -I$ALICE_PHYSICS/../src/ -I$ALICE_ROOT/include -I$ALICE_ROOT/../src/ITS -I$ALICE_ROOT/../src/TPC -I$ALICE_ROOT/../src/CONTAINERS -I$ALICE_ROOT/../src/STEER/STEER -I$ALICE_ROOT/../src/STEER/STEERBase -I$ALICE_ROOT/../src/STEER/ESD -I$ALICE_ROOT/../src/STEER/AOD -I$ALICE_ROOT/../src/TRD -I$ALICE_ROOT/../src/macros -I$ALICE_ROOT/../src/ANALYSIS  -I$ALICE_ROOT/../src/OADB -I$ALICE_PHYSICS/../src/PWGHF -I$ALICE_PHYSICS/../src/PWGHF/base -I$ALICE_PHYSICS/../src/PWGHF/vertexingHF -I$ALICE_PHYSICS/../src/PWG/FLOW/Base -I$ALICE_PHYSICS/../src/PWG/FLOW/Tasks -g");
-    //
+
     TString trainName = "D2H";
     TString analysisMode = "grid"; // "local", "grid", or "proof"
     TString inputMode    = "list"; // "list", "xml", or "dataset"
     Long64_t nentries=123567890,firstentry=0;
     Bool_t useParFiles=kFALSE;
     Bool_t useAlienPlugin=kTRUE;
-    TString pluginmode="terminate";//full su grid, mentre terminate fa il merging degli AnalysisResults
     Bool_t saveProofToAlien=kFALSE;
     TString proofOutdir = "";
     TString loadMacroPath="$ALICE_PHYSICS/PWGHF/vertexingHF/macros/";
-
+  
     if(analysisMode=="grid") {
         // Connect to AliEn
         TGrid::Connect("alien://");
@@ -171,35 +169,22 @@ void RunAnalysisAODVertexingDplus(Bool_t fUseMC = kFALSE)
     //
     // First add the task for the PID response setting
     gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskPIDResponse.C");
-    Bool_t flagForPID = kFALSE;
-    if(fUseMC) flagForPID = kTRUE;
-    AliAnalysisTaskSE *setupTask = AddTaskPIDResponse(flagForPID,flagForPID);//kTRUE su MC!!
+    Bool_t flagForMC = kFALSE;
+    if(fUseMC) flagForMC = kTRUE;
+    AliAnalysisTaskSE *setupTask = AddTaskPIDResponse(flagForMC,flagForMC);//kTRUE su MC!!
 
     TString taskName;
-
-    ////// ADD THE FULL D2H TRAIN
-    /*taskName="../AddD2HTrain.C"; taskName.Prepend(loadMacroPath.Data());
-     gROOT->LoadMacro(taskName.Data());
-     Bool_t readMC=kFALSE;
-     AddD2HTrain(readMC);//,1,0,0,0,0,0,0,0,0,0,0);*/
-
-    ////// OR ADD INDIVIDUAL TASKS
-
-    // taskName="AddTaskHFQA.C";
-    //gROOT->LoadMacro(taskName.Data());
-    //AliAnalysisTaskSEHFQA *qaTask = AddTaskHFQA(0);
-
-    gROOT->LoadMacro("$ALICE_PHYSICS/PWGHF/vertexingHF/AliAnalysisTaskSEDplus.cxx+");
+    TString suffix="3050";
+    if(fUseMC) suffix="3050_MC";
+  
     gROOT->LoadMacro("$ALICE_PHYSICS/PWGHF/vertexingHF/macros/AddTaskDplus.C");
-    gROOT->LoadMacro("$ALICE_PHYSICS/PWGHF/vertexingHF/AliAnalysisTaskSECleanupVertexingHF.cxx+");
+    TString cutfilename="alien:///alice/cern.ch/user/f/fgrosa/DplustoKpipiCuts_3050_central_topod0cut_kINT7.root";
+    if(fUseMC) cutfilename="alien:///alice/cern.ch/user/f/fgrosa/DplustoKpipiCuts_3050_central_topod0cut_MC.root";
+    TString suffix="_Central_Topomatic_d0_Cut";
+    if(fUseMC) suffix="_Central_Topomatic_d0_Cut_MC";
+    AliAnalysisTaskSEDplus *task1 = AddTaskDplus(1,30,50,0,3,kFALSE,flagForMC,suffix.Data(),cutfilename.Data(),"AnalysisCuts",0);
+  
     gROOT->LoadMacro("$ALICE_PHYSICS/PWGHF/vertexingHF/macros/AddTaskCleanupVertexingHF.C");
-
-    AliAnalysisTaskSEDplus *task1 = AddTaskDplus(1,30,50,0,3,kFALSE,kFALSE,"3050_central_kINT7","alien:///alice/cern.ch/user/f/fgrosa/DplustoKpipiCuts_3050_central_kINT7.root","AnalysisCuts",0);
-    AliAnalysisTaskSEDplus *task2 = AddTaskDplus(1,30,50,0,3,kFALSE,kFALSE,"3050_topocut_kINT7","alien:///alice/cern.ch/user/f/fgrosa/DplustoKpipiCuts_3050_central_topocut_kINT7.root","AnalysisCuts",0);
-    AliAnalysisTaskSEDplus *task3 = AddTaskDplus(1,30,50,0,3,kFALSE,kFALSE,"3050_d0cut_kINT7","alien:///alice/cern.ch/user/f/fgrosa/DplustoKpipiCuts_3050_central_d0cut_kINT7.root","AnalysisCuts",0);
-    AliAnalysisTaskSEDplus *task4 = AddTaskDplus(1,20,40,0,3,kFALSE,kFALSE,"2040_central_kINT7","alien:///alice/cern.ch/user/f/fgrosa/DplustoKpipiCuts_2040_central_kINT7.root","AnalysisCuts",0);
-    AliAnalysisTaskSEDplus *task5 = AddTaskDplus(1,20,40,0,3,kFALSE,kFALSE,"2040_topocut_kINT7","alien:///alice/cern.ch/user/f/fgrosa/DplustoKpipiCuts_2040_central_topocut_kINT7.root","AnalysisCuts",0);
-    AliAnalysisTaskSEDplus *task6 = AddTaskDplus(1,20,40,0,3,kFALSE,kFALSE,"2040_d0cut_kINT7","alien:///alice/cern.ch/user/f/fgrosa/DplustoKpipiCuts_2040_central_d0cut_kINT7.root","AnalysisCuts",0);
     AliAnalysisTaskSECleanupVertexingHF *taskclean = AddTaskCleanupVertexingHF();
 
     //-------------------------------------------------------------------
@@ -234,99 +219,41 @@ AliAnalysisGrid* CreateAlienHandler(TString pluginmode="test",Bool_t useParFiles
     plugin->SetUser("fgrosa");
     // Set versions of used packages
     plugin->SetAPIVersion("V1.1x");
-    plugin->SetAliPhysicsVersion("vAN-20161017-1");
+    plugin->SetAliPhysicsVersion("vAN-20161107-1");
     plugin->SetNtestFiles(1);
     plugin->AddIncludePath("-I. -I$ROOTSYS/include -I$ALICE_PHYSICS/include -g");
     // gROOT->LoadMacro("AddGoodRunsSPLIT.C");
     gROOT->LoadMacro("$ALIPHYSICS/PWGHF/vertexingHF/AddGoodRuns.C");
 
-    // Declare input data to be processed.
-    //************************************************
-    // Set data search pattern for DATA
-    //************************************************
-    //Method 1: To create automatically xml through plugin
-
-    // plugin->SetGridDataDir("/alice/sim/2013/LHC13d3"); // specify LHC period
-    // plugin->SetDataPattern("AOD/*/AliAOD.root"); // specify reco pass and AOD set
-
-    // plugin->SetFriendChainName("AliAOD.VertexingHF.root");
-
-    // OR plugin->SetFriendChainName("deltas/AliAOD.VertexingHF.root");
-    // Adds only the good runs from the Monalisa Run Condition Table
-    // More than one period can be added but the period name has to be removed from GridDataDir (to be tested)
-
-    //plugin->SetRunPrefix("000");
-
-    // plugin->AddRunNumber(195677);
-    // plugin->AddRunNumber(195675);
-    //  plugin->AddRunNumber(195673);
-    //  plugin->AddRunNumber(195644);
-
-    //  plugin->SetNrunsPerMaster(16);
-
-    // Method 2: Declare existing data files (e.g xml collections)
-
-    //plugin->SetDataPattern("*AliAOD.root");
-    //plugin->SetFriendChainName("./AliAOD.VertexingHF.root");
-
-    //************************************************
-    // Set data search pattern for MONTECARLO
-    //************************************************
-
-    //plugin->SetGridDataDir("/alice/sim/2012/LHC12a17b_fix"); // specify LHC period
-    //plugin->SetDataPattern("AOD149/*AliAOD.root"); // specify reco pass and AOD set
-    //plugin->SetFriendChainName("./AliAOD.VertexingHF.root");
-
-    // OR plugin->SetFriendChainName("deltas/AliAOD.VertexingHF.root");
-    // Adds only the good runs from the Monalisa Run Condition Table
-    // More than one period can be added!
-
-    //Int_t totruns=0;
-    //totruns += AddGoodRuns(plugin,"LHC11h_pass2","LHC12a17a"); // specify LHC period
-    //plugin->SetNrunsPerMaster(totruns);
-
     ///PER MC
     if(fUseMC==kTRUE) {
         //to be setted!
-        plugin->SetGridDataDir("/alice/sim/2015/LHC15a2a");
-        plugin->SetDataPattern("/pass2_lowIR/AOD/*AliAOD.root");
+        plugin->SetGridDataDir("/alice/sim/2016/LHC16i2b");
+        plugin->SetDataPattern("/AOD/*AliAOD.root");
         plugin->SetFriendChainName("./AliAOD.VertexingHF.root");
         Int_t totruns=0;
-        totruns += AddGoodRuns(plugin,"LHC15o",""); // specify LHC period
-        plugin->SetNrunsPerMaster(totruns);
+        plugin->AddRunNumber(245833);
+        plugin->SetNrunsPerMaster(1);
     }
     else {
         plugin->SetGridDataDir("/alice/data/2015/LHC15o/");
         plugin->SetDataPattern("/pass1/AOD/*AliAOD.root");
         plugin->SetFriendChainName("./AliAOD.VertexingHF.root");
-
-//        Int_t totruns=0;
-//        totruns += AddGoodRuns(plugin,"LHC15o",""); // specify LHC period
         plugin->SetRunPrefix("000"); //data
-        //plugin->AddRunNumber(246087); //very big run pass1
-        plugin->AddRunNumber(246982); //small pass1
+        plugin->AddRunNumber(246087); //very big run pass1
+        //plugin->AddRunNumber(246982); //small pass1
         //plugin->AddRunNumber(244917);//low intensity pass2_lowIR
         plugin->SetNrunsPerMaster(1);
-
-        //plugin->AddDataFile("/alice/cern.ch/user/a/abarbano/xml/LHC15o_pass2_lowIR/000244917_000246392.xml");
     }
-
-    //    Int_t totruns=0;
-    //    totruns += AddGoodRuns(plugin,"LHC10d",""); // specify LHC period
-    //    totruns++;
-    //    plugin->SetNrunsPerMaster(totruns);
-
-
-    //        plugin->SetRunPrefix("000");
-    //    plugin->AddRunNumber(126437);
-    //    totruns++;
-    //        plugin->SetNrunsPerMaster(totruns);
-
-
-    plugin->SetGridWorkingDir("Dplus_PbPb");
-    plugin->SetExecutable("Dplus_PbPb.sh");
+  
+    TString suffix="3050";
+    if(fUseMC) suffix="3050_MC";
+  
+    plugin->SetGridWorkingDir(Form("Dplus2_PbPb_%s",suffix.Data()));
+    // Name of executable
+    plugin->SetExecutable(Form("Dplus2_PbPb_%s.sh",suffix.Data()));
     // Declare alien output directory. Relative to working directory.
-    plugin->SetGridOutputDir("Dplus_PbPb"); // In this case will be $HOME/work/output
+    plugin->SetGridOutputDir("output"); // In this case will be $HOME/work/output
     // Declare the analysis source files names separated by blancs. To be compiled runtime
     // using ACLiC on the worker nodes.
     // Declare all libraries (other than the default ones for the framework. These will be
@@ -346,14 +273,12 @@ AliAnalysisGrid* CreateAlienHandler(TString pluginmode="test",Bool_t useParFiles
         plugin->EnablePackage("PWGHFvertexingHF.par");
     }
 
-    //plugin->AddIncludePath("-I. -I$ROOTSYS/include -I$ALICE_ROOT -I$ALICE_ROOT/include -I$ALICE_ROOT/ITS -I$ALICE_ROOT/TPC -I$ALICE_ROOT/CONTAINERS -I$ALICE_ROOT/STEER/STEER -I$ALICE_ROOT/STEER/STEERBase -I$ALICE_ROOT/STEER/ESD -I$ALICE_ROOT/STEER/AOD -I$ALICE_ROOT/TRD -I$ALICE_ROOT/macros -I$ALICE_ROOT/ANALYSIS  -I$ALICE_ROOT/OADB -I$ALICE_ROOT/PWGHF -I$ALICE_ROOT/PWGHF/base -I$ALICE_ROOT/PWGHF/vertexingHF -I$ALICE_ROOT/PWG/FLOW/Base -I$ALICE_ROOT/PWG/FLOW/Tasks -g");
-
     plugin->SetDefaultOutputs(kTRUE);
     // merging via jdl
     plugin->SetMergeViaJDL(kFALSE);
     plugin->SetOneStageMerging(kFALSE);
     plugin->SetMaxMergeStages(3);
-    plugin->SetSplitMaxInputFileNumber(10);
+    plugin->SetSplitMaxInputFileNumber(5);
     // Optionally set time to live (default 30000 sec)
     // plugin->SetTTL(30000);
 
