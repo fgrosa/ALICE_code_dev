@@ -50,7 +50,7 @@ const TString infileDataname="$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/An
 const TString dirDataname=dirMCname;
 const TString listDataname="coutputDplus_3050_CentralCuts_kINT73050";//"coutputDplus_ImpParpPbData0100";
 
-enum {kBinned,kUnbinned};
+enum {kUnbinned,kBinned,kBinnedBkgSub,kBinnedVarBin};
 
 //_____________________________________________________________________________________________
 //FUNCTION PROTOTYPES
@@ -58,8 +58,6 @@ Int_t FitImpPar(Int_t method=kUnbinned,
                 TString fitoption="RLEM",
                 Bool_t isSigmaFixed=kFALSE,
                 Double_t nSigmas=2.,
-                Bool_t isVarBinning=kTRUE,
-                Bool_t isBkgSub=kFALSE,
                 Bool_t PIDcut=kFALSE,
                 Int_t sovert=AliDplusCharmFractionIPfitter::kCentralValue,
                 Int_t SBregion=AliDplusCharmFractionIPfitter::kBoth,
@@ -74,7 +72,7 @@ void SetStyle();
 
 //_____________________________________________________________________________________________
 //IMPACT PARAMETER FIT FUNCTION
-Int_t FitImpPar(Int_t method,TString fitoption,Bool_t isSigmaFixed,Double_t nSigmas,Bool_t isVarBinning,Bool_t isBkgSub,Bool_t PIDcut,Int_t sovert,Int_t SBregion,Int_t FDtype,Int_t bkgtype,Int_t impparreb, Int_t massreb, Int_t SBlow, Int_t SBhigh,Double_t d0cut) {
+Int_t FitImpPar(Int_t method,TString fitoption,Bool_t isSigmaFixed,Double_t nSigmas,Bool_t PIDcut,Int_t sovert,Int_t SBregion,Int_t FDtype,Int_t bkgtype,Int_t impparreb, Int_t massreb, Int_t SBlow, Int_t SBhigh,Double_t d0cut) {
 
   //___________________________________________________________________________________________
   //input files
@@ -145,13 +143,15 @@ Int_t FitImpPar(Int_t method,TString fitoption,Bool_t isSigmaFixed,Double_t nSig
     
     if(method==kUnbinned)
       ImpParFitter->FitTree(-d0lim[iPt],d0lim[iPt],kTRUE);
-    else if(method==kBinned) {
-      ImpParFitter->SetVariableBinningHisto(isVarBinning,5);
-      ImpParFitter->SetBkgSubtraction(isBkgSub);
+    else if(method==kBinned || method==kBinnedBkgSub || method==kBinnedVarBin) {
+      if(method==kBinnedVarBin) ImpParFitter->SetVariableBinningHisto(kTRUE,5);
+      if(method==kBinnedBkgSub) ImpParFitter->SetBkgSubtraction(kTRUE);
       ImpParFitter->FitHisto(-d0lim[iPt],d0lim[iPt],kTRUE);
     }
-    else
-      cerr << "only binned or unbinned fits are supported" << endl;
+    else {
+      cerr << "Error: only binned or unbinned fits are supported!" << endl;
+      return 3;
+    }
 
     Double_t promptfracd0cut;
     Double_t promptfracd0cuterr;
