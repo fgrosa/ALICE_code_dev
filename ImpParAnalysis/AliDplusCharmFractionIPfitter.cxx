@@ -925,15 +925,26 @@ void AliDplusCharmFractionIPfitter::FitTree(Double_t d0min, Double_t d0max, Bool
     ImpParFitFunction->SetParLimits(1,sigmamin,sigmamax);
   }
 
+  fImpParHisto = new TH1F("fImpParHisto","",400,-1000,1000);
   if(fDataTree->GetBranch("Pt") && fDataTree->GetBranch("InvMass")) {
     Double_t massmin=fMassMean-fNSigma*fMassSigma;
     Double_t massmax=fMassMean+fNSigma*fMassSigma;
+    fDataTree->Project("fImpParHisto",Form("%s",fImpParBranch.Data()),Form("%s>%f && %s<%f && %s>%f && %s<%f",fPtBranch.Data(),fPtMin,fPtBranch.Data(),fPtMax,fMassBranch.Data(),massmin,fMassBranch.Data(),massmax));
+    //Mean values of prompt and feeddown contributions set to the mean value of the data distribution
+    fPromptMean=fImpParHisto->GetMean();
+    fFDMean=fImpParHisto->GetMean();
+    //unbinned fit
     fDataTree->UnbinnedFit("ImpParFitFunction",fImpParBranch.Data(),Form("%s>%f && %s<%f && %s>%f && %s<%f",fPtBranch.Data(),fPtMin,fPtBranch.Data(),fPtMax,fMassBranch.Data(),massmin,fMassBranch.Data(),massmax),fFitOptions.Data());
   }
   else {
+    fDataTree->Project("fImpParHisto",Form("%s",fImpParBranch.Data()));
+    //Mean values of prompt and feeddown contributions set to the mean value of the data distribution
+    fPromptMean=fImpParHisto->GetMean();
+    fFDMean=fImpParHisto->GetMean();
+    //unbinned fit
     fDataTree->UnbinnedFit("ImpParFitFunction",fImpParBranch.Data(),"",fFitOptions.Data());
   }
-
+  
   fPromptFraction = ImpParFitFunction->GetParameter(0);
   fPromptFractionErr = ImpParFitFunction->GetParError(0);
   fPromptSigma = ImpParFitFunction->GetParameter(1);
@@ -949,15 +960,6 @@ void AliDplusCharmFractionIPfitter::FitTree(Double_t d0min, Double_t d0max, Bool
   }
   
   ///chi square -> as it was a binned fit (not very exact)
-  Double_t massmin=fMassMean-fNSigma*fMassSigma;
-  Double_t massmax=fMassMean+fNSigma*fMassSigma;
-  fImpParHisto = new TH1F("fImpParHisto","",400,-1000,1000);
-  if(fDataTree->GetBranch("Pt") && fDataTree->GetBranch("InvMass")) {
-   fDataTree->Project(Form("%s>>fImpParHisto",fImpParBranch.Data()),Form("%s>%f && %s<%f && %s>%f && %s<%f",fPtBranch.Data(),fPtMin,fPtBranch.Data(),fPtMax,fMassBranch.Data(),massmin,fMassBranch.Data(),massmax));
-   }
-   else {
-     fDataTree->Project("fImpParHisto",Form("%s",fImpParBranch.Data()));
-   }
   fChiSquare = fImpParHisto->Chisquare(ImpParFitFunction);
   fNDF = 0;
   for(Int_t iBin=0; iBin<fImpParHisto->GetNbinsX(); iBin++) {
@@ -1068,8 +1070,11 @@ void AliDplusCharmFractionIPfitter::FitHisto(Double_t d0min, Double_t d0max, Boo
     fIntegral=fIntegral*fImpParHisto->GetBinWidth(1);
   }
 
-  if(!fVariableBinning)
-    TVirtualFitter::SetDefaultFitter("Minuit2");
+  //Mean values of prompt and feeddown contributions set to the mean value of the data distribution
+  fPromptMean=fImpParHisto->GetMean();
+  fFDMean=fImpParHisto->GetMean();
+  
+  if(!fVariableBinning) {TVirtualFitter::SetDefaultFitter("Minuit2");}
   fImpParHisto->Fit("ImpParFitFunction",fFitOptions.Data());
   
   fPromptFraction = ImpParFitFunction->GetParameter(0);
@@ -1659,9 +1664,9 @@ void AliDplusCharmFractionIPfitter::DrawResult(Bool_t isFromTree)
   gStyle->SetPadBottomMargin(0.12);
   
   if(isFromTree) {
-    fIntegral=fIntegral*fMCPromptSparse->GetAxis(fImpParAxis)->GetBinWidth(1);
-    fBkg=fBkg*fMCPromptSparse->GetAxis(fImpParAxis)->GetBinWidth(1);
-    fSig=fSig*fMCPromptSparse->GetAxis(fImpParAxis)->GetBinWidth(1);
+    fIntegral=fIntegral*fImpParHisto->GetXaxis()->GetBinWidth(10);
+    fBkg=fBkg*fImpParHisto->GetXaxis()->GetBinWidth(10);
+    fSig=fSig*fImpParHisto->GetXaxis()->GetBinWidth(10);
   }
   
   TF1* ImpParPromptFunc = new TF1("ImpParPromptFunc",this,&AliDplusCharmFractionIPfitter::FunctionImpParPrompt,-1000,1000,5,"ImpParPromptFunc","FunctionImpParPrompt");
@@ -1728,18 +1733,6 @@ void AliDplusCharmFractionIPfitter::DrawResult(Bool_t isFromTree)
   TCanvas *cFit = new TCanvas("cFit","",900,900);
   cFit->SetLogy();
 
-  if(isFromTree) {
-    fImpParHisto = new TH1F("fImpParHisto","",400,-1000,1000);
-    if(fMCTest){  
-      fDataTree->Draw(Form("%s>>fImpParHisto",fImpParBranch.Data()));      
-    }
-    else { 
-      Double_t massmin=fMassMean-fNSigma*fMassSigma;
-      Double_t massmax=fMassMean+fNSigma*fMassSigma;
-      fDataTree->Draw(Form("%s>>fImpParHisto",fImpParBranch.Data()),Form("%s>%f && %s<%f && %s>%f && %s<%f",fPtBranch.Data(),fPtMin,fPtBranch.Data(),fPtMax,fMassBranch.Data(),massmin,fMassBranch.Data(),massmax));
-    }
-  }
-
   Double_t d0min=ImpParRecoFDFunc->GetMaximum()/50;
   Double_t d0max=fImpParHisto->GetMaximum()*1.5;
   if(d0min<0 || d0min>fImpParHisto->GetMinimum())
@@ -1752,19 +1745,12 @@ void AliDplusCharmFractionIPfitter::DrawResult(Bool_t isFromTree)
   fImpParHisto->SetLineWidth(2);
   fImpParHisto->SetMarkerStyle(21);
   fImpParHisto->SetMarkerSize(1.);
-  if(isFromTree){
-    fImpParHisto->SetStats(0);
-    fImpParHisto->SetDrawOption("E1");
-  }
-  else
-    fImpParHisto->Draw("E1");
+  fImpParHisto->Draw("E1");
   
   fImpParHisto->SetTitle(Form("%0.f < #it{p}_{T} < %0.f GeV/c",fPtMin,fPtMax));
   fImpParHisto->GetXaxis()->SetTitle("Imp Par XY (#mum)");
-  if(fVariableBinning)
-    fImpParHisto->GetYaxis()->SetTitle("Entries/bin width");
-  else
-    fImpParHisto->GetYaxis()->SetTitle(Form("Entries/(%0.f #mum)",fImpParHisto->GetBinWidth(5)));    
+  if(fVariableBinning) {fImpParHisto->GetYaxis()->SetTitle("Entries/bin width");}
+  else {fImpParHisto->GetYaxis()->SetTitle(Form("Entries/(%0.f #mum)",fImpParHisto->GetBinWidth(5)));}
   fImpParHisto->GetXaxis()->SetNdivisions(505);
   ImpParTotFunc->Draw("same");
   ImpParPromptFunc->Draw("same");
@@ -1774,12 +1760,10 @@ void AliDplusCharmFractionIPfitter::DrawResult(Bool_t isFromTree)
   TFile *outfile = 0x0;
   TString filename;
   
-  if(isFromTree)
-    filename= "FitUnbinned";
-  else if(!isFromTree && fSubBkg)
-    filename="FitBinnedBkgSub";
-  else
-    filename="FitBinned";
+  if(isFromTree) {filename= "FitUnbinned";}
+  else if(!isFromTree && fSubBkg) {filename="FitBinnedBkgSub";}
+  else if(!isFromTree && fVariableBinning) {filename="FitBinnedVarBin";}
+  else {filename="FitBinned";}
 
   if(fMCTest) {
     cFit->SaveAs(Form("%s_%0.f-%0.f_genfrac_%0.2f.pdf",filename.Data(),fPtMin,fPtMax,fGenPromptFraction));
@@ -1805,9 +1789,9 @@ void AliDplusCharmFractionIPfitter::DrawResult(Bool_t isFromTree)
   delete cFit;
   
   if(isFromTree) {
-    fBkg /= fMCPromptSparse->GetAxis(fImpParAxis)->GetBinWidth(1);
-    fSig /= fMCPromptSparse->GetAxis(fImpParAxis)->GetBinWidth(1);
-    fIntegral /= fMCPromptSparse->GetAxis(fImpParAxis)->GetBinWidth(1); 
+    fBkg /= fImpParHisto->GetXaxis()->GetBinWidth(10);
+    fSig /= fImpParHisto->GetXaxis()->GetBinWidth(10);
+    fIntegral /= fImpParHisto->GetXaxis()->GetBinWidth(10);
   }
 }
 
