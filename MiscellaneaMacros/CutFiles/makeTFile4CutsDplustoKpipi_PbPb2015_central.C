@@ -8,7 +8,7 @@
 //Needed for AliAnalysisTaskSEDplus, AliCFTaskVertexingHF3Prong, AliAnalysisTaskSESignificance
 
 void makeTFile4CutsDplustoKpipi_010(Bool_t fUseMC=kFALSE);
-void makeTFile4CutsDplustoKpipi_010(Bool_t fUseMC=kFALSE);
+void makeTFile4CutsDplustoKpipi_020(Bool_t fUseMC=kFALSE);
 void makeTFile4CutsDplustoKpipi_2040(Bool_t fUseMC=kFALSE);
 void makeTFile4CutsDplustoKpipi_3050(Bool_t fUseMC=kFALSE);
 void makeTFile4CutsDplustoKpipi_6080(Bool_t fUseMC=kFALSE);
@@ -772,7 +772,7 @@ void makeTFile4CutsDplustoKpipi_3050(Bool_t fUseMC){
   anacutsval[ic][0]=12.;
   anacutsval[ic][1]=12.;
   anacutsval[ic][2]=12.;
-  anacutsval[ic][3]=12.;
+  anacutsval[ic][3]=10.;
   anacutsval[ic][4]=10.;
   anacutsval[ic][5]=10.;
   anacutsval[ic][6]=10.;
