@@ -44,33 +44,33 @@
 //_________________________________________________________________
 //GLOBAL VARIABLES TO BE SET
 //input file
-const TString filename="$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/AnalysisResults_3050_flow.root";
-const TString suffix="TPC";//"_3050_CentralCuts_TPC";
+const TString filename="$HOME/ALICE_WORK/Files/Trains/Run2/LHC15/LHC15o/AnalysisResults_v2_EP_VZERO_Topod0Cut_3050.root";
+const TString suffix="_Topod0Cut_VZERO_EP";//"_3050_CentralCuts_TPC";
 const TString partname="Dplus";
 const Int_t minCent=30;
 const Int_t maxCent=50;
 
 //EP resolution
 //kTPCFullEta, kTPCPosEta,kVZERO,kVZEROA,kVZEROC
-const Int_t evPlane=AliEventPlaneResolutionHandler::kTPCFullEta;
+const Int_t evPlane=AliEventPlaneResolutionHandler::kVZERO;
 //resolution flag fromAliEventPlaneResolutionHandler:
 //kTwoRandSub,kTwoChargeSub,kTwoEtaSub,kThreeSub,kThreeSubTPCGap
 const Bool_t useAliHandlerForRes=kFALSE;
-Int_t evPlaneRes=AliEventPlaneResolutionHandler::kTwoEtaSub;
-const Bool_t useNcollWeight=kFALSE;
+Int_t evPlaneRes=AliEventPlaneResolutionHandler::kThreeSub;
+const Bool_t useNcollWeight=kTRUE;
 
 // pt and phi binning
-const Int_t nptbinsnew=8;
-const Double_t ptbinsnew[nptbinsnew+1]={2.,3.,4.,5.,6.,8.,10.,12.,16.};
+const Int_t nptbinsnew=11;
+const Double_t ptbinsnew[nptbinsnew+1]={2.,3.,4.,5.,6.,7.,8.,10.,12.,14.,16.,24.};
 const Int_t nphibins=4;
 const Double_t phibinslim[nphibins+1]={0,TMath::Pi()/4,TMath::Pi()/2,3*TMath::Pi()/4,TMath::Pi()};
 
 // mass fit configuration
-const Int_t rebin[nptbinsnew]={5,5,5,5,5,5,5,8};
+const Int_t rebin[]={2,3,3,3,4,4,4,4,4,4,4};
 const Int_t typeb=AliHFMassFitter::kExpo;  // Background: 0=expo, 1=linear, 2=pol2
-const Bool_t fixAlsoMass=kFALSE;
+const Bool_t fixAlsoMass=kTRUE;
 const Double_t minMassForFit=1.67;
-const Double_t maxMassForFit=2.05;
+const Double_t maxMassForFit=2.03;
 const Double_t nSigmaForCounting=3.5;
 
 //not to be set
@@ -323,10 +323,10 @@ void FillSignalGraph(TList *histlist,TGraphAsymmErrors **gSignal,TGraphAsymmErro
   TCanvas *cPhiInteg = new TCanvas("cinvmass","Invariant mass distributions - #phi integrated",1920,1080);
   cDeltaPhi->Divide(nptbinsnew,nphi);
   cDeltaPhifs->Divide(nptbinsnew,nphi);
-  cPhiInteg->Divide(nptbinsnew/2,2);
+  if(nptbinsnew%2==0) {cPhiInteg->Divide(nptbinsnew/2,2);}
+  else {cPhiInteg->Divide(nptbinsnew/2+1,2);}
   Int_t nMassBins;
-  Double_t hmin,hmax;
-  for(Int_t ipt=0;ipt<nptbinsnew;ipt++){    
+  for(Int_t ipt=0;ipt<nptbinsnew;ipt++){
     TH1F *histtofitfullsigma=(TH1F*)histlist->FindObject(Form("hMass_pt%d_phi0",ipt))->Clone();
     for(Int_t iphi=0;iphi<nphi;iphi++){
       Int_t ipad=GetPadNumber(ipt,iphi);
@@ -338,12 +338,10 @@ void FillSignalGraph(TList *histlist,TGraphAsymmErrors **gSignal,TGraphAsymmErro
         gSignal[ipt]->SetPointError(iphi,0,0,esignal,esignal);
         return;
       }
-      histtofit->SetTitle(Form("%.0f < #it{p}_{T} < %.0f, #phi%d",ptbinsnew[ipt],ptbinsnew[ipt+1],iphi));
+      histtofit->SetTitle(Form("%.0f < #it{p}_{T} < %.0f GeV/c, #phi%d",ptbinsnew[ipt],ptbinsnew[ipt+1],iphi));
       nMassBins=histtofit->GetNbinsX();
-      hmin=TMath::Max(minMassForFit,histtofit->GetBinLowEdge(2));
-      hmax=TMath::Min(maxMassForFit,histtofit->GetBinLowEdge(nMassBins-2));
       histtofit->Rebin(rebin[ipt]);
-      AliHFMassFitter fitter(histtofit,hmin,hmax,1,typeb);
+      AliHFMassFitter fitter(histtofit,minMassForFit,maxMassForFit,1,typeb);
       fitter.SetInitialGaussianMean(massD);
       fitter.SetInitialGaussianSigma(0.012);
       Bool_t ok=fitter.MassFitter(kFALSE);
@@ -382,11 +380,10 @@ void FillSignalGraph(TList *histlist,TGraphAsymmErrors **gSignal,TGraphAsymmErro
     histtofitfullsigma->GetXaxis()->SetTitle("M_{K#pi#pi} (GeV/c^{2})");
     histtofitfullsigma->GetXaxis()->SetTitleSize(0.05);
     nMassBins=histtofitfullsigma->GetNbinsX();
-    hmin=TMath::Max(minMassForFit,histtofitfullsigma->GetBinLowEdge(2));
-    hmax=TMath::Min(maxMassForFit,histtofitfullsigma->GetBinLowEdge(nMassBins-2));
     histtofitfullsigma->Rebin(rebin[ipt]);
-    AliHFMassFitter fitter(histtofitfullsigma,hmin,hmax,1,typeb);
+    AliHFMassFitter fitter(histtofitfullsigma,minMassForFit,maxMassForFit,1,typeb);
     fitter.SetInitialGaussianMean(massD);
+    fitter.SetInitialGaussianSigma(0.012);
     Bool_t ok=fitter.MassFitter(kFALSE);
     if(ok){
       fitter.DrawHere(cPhiInteg->cd(ipt+1),3,1);
@@ -396,12 +393,10 @@ void FillSignalGraph(TList *histlist,TGraphAsymmErrors **gSignal,TGraphAsymmErro
     for(Int_t iphi=0;iphi<nphi;iphi++){
       Int_t ipad=GetPadNumber(ipt,iphi);
       TH1F *histtofit=(TH1F*)histlist->FindObject(Form("hMass_pt%d_phi%d",ipt,iphi))->Clone();
-      histtofit->SetTitle(Form("%.1f<#it{p}_{T}<%.1f, #phi%d",ptbinsnew[ipt],ptbinsnew[ipt+1],iphi));
+      histtofit->SetTitle(Form("%.0f < #it{p}_{T} < %.0f GeV/c, #phi%d",ptbinsnew[ipt],ptbinsnew[ipt+1],iphi));
       nMassBins=histtofit->GetNbinsX();
-      hmin=TMath::Max(minMassForFit,histtofit->GetBinLowEdge(2));
-      hmax=TMath::Min(maxMassForFit,histtofit->GetBinLowEdge(nMassBins-2));
       histtofit->Rebin(rebin[ipt]);
-      AliHFMassFitter fitter2(histtofit,hmin,hmax,1,typeb);
+      AliHFMassFitter fitter2(histtofit,minMassForFit,maxMassForFit,1,typeb);
       fitter2.SetInitialGaussianMean(massD);
       fitter2.SetFixGaussianSigma(sigma);
       if(fixAlsoMass) fitter2.SetFixGaussianMean(massFromFit);
@@ -417,10 +412,11 @@ void FillSignalGraph(TList *histlist,TGraphAsymmErrors **gSignal,TGraphAsymmErro
   }//end loop on pt bin
 
 
-  cDeltaPhi->SaveAs(Form("InvMassDeltaPhi_%s.pdf",suffix.Data()));
-  cDeltaPhifs->SaveAs(Form("InvMassDeltaPhi_fs_%s.pdf",suffix.Data()));
-  cDeltaPhifs->SaveAs(Form("InvMassDeltaPhi_fs_%s.root",suffix.Data()));
-  cPhiInteg->SaveAs(Form("InvMassfullphi_%s.pdf",suffix.Data()));
+  cDeltaPhi->SaveAs(Form("InvMassDeltaPhi%s.pdf",suffix.Data()));
+  cDeltaPhi->SaveAs(Form("InvMassDeltaPhi%s.root",suffix.Data()));
+  cDeltaPhifs->SaveAs(Form("InvMassDeltaPhi_fs%s.pdf",suffix.Data()));
+  cDeltaPhifs->SaveAs(Form("InvMassDeltaPhi_fs%s.root",suffix.Data()));
+  cPhiInteg->SaveAs(Form("InvMassfullphi%s.pdf",suffix.Data()));
 }
 
 TGraphAsymmErrors* Computev2(TGraphAsymmErrors **gSignal, Double_t resol, Float_t *averagePt, Bool_t inoutanis, TGraphAsymmErrors *gRelSystEff) {
@@ -520,7 +516,7 @@ void DmesonsFlowAnalysis(Bool_t inoutanis){
   TList *histlist=LoadMassHistos(list,inoutanis);
   TString aniss="";
   if(inoutanis)aniss+="anis";
-  histlist->SaveAs(Form("v2Histograms_%d_%d_%s_%s.root",minCent,maxCent,aniss.Data(),suffix.Data()),"RECREATE");
+  histlist->SaveAs(Form("v2Histograms_%d_%d_%s%s.root",minCent,maxCent,aniss.Data(),suffix.Data()),"RECREATE");
 
   Int_t nphi=nphibins;
   if(inoutanis)nphi=2;
@@ -565,18 +561,18 @@ void DmesonsFlowAnalysis(Bool_t inoutanis){
   for(Int_t i=0;i<nptbinsnew;i++){
     gSignal[i]=new TGraphAsymmErrors(nphi);
     gSignal[i]->SetName(Form("gasigpt%d",i));
-    gSignal[i]->SetTitle(Form("Signal %.1f<#it{p}_{T}<%.1f GeV/c;#Delta#phi bin;Counts",ptbinsnew[i],ptbinsnew[i+1]));
+    gSignal[i]->SetTitle(Form("Signal %.0f < #it{p}_{T} < %.0f GeV/c;#Delta#phi bin;Counts",ptbinsnew[i],ptbinsnew[i+1]));
     gSignal[i]->SetMarkerStyle(25);
     gSignalfs[i]=new TGraphAsymmErrors(nphi);
     gSignalfs[i]->SetName(Form("gasigfspt%d",i));
-    gSignalfs[i]->SetTitle(Form("Signal (fixed sigma) %.1f<#it{p}_{T}<%.1f GeV/c;#Delta#phi bin;Counts",ptbinsnew[i],ptbinsnew[i+1]));
+    gSignalfs[i]->SetTitle(Form("Signal (fixed sigma) %.0f < #it{p}_{T} < %.0f GeV/c;#Delta#phi bin;Counts",ptbinsnew[i],ptbinsnew[i+1]));
     gSignalfs[i]->SetMarkerStyle(21);
     gSignalBC1[i]=new TGraphAsymmErrors(nphi);
     gSignalBC1[i]->SetName(Form("gasigBC1pt%d",i));
-    gSignalBC1[i]->SetTitle(Form("Signal (BC1) %.1f<#it{p}_{T}<%.1f GeV/c;#Delta#phi bin;Counts",ptbinsnew[i],ptbinsnew[i+1]));
+    gSignalBC1[i]->SetTitle(Form("Signal (BC1) %.0f < #it{p}_{T} < %.0f GeV/c;#Delta#phi bin;Counts",ptbinsnew[i],ptbinsnew[i+1]));
     gSignalBC2[i]=new TGraphAsymmErrors(nphi);
     gSignalBC2[i]->SetName(Form("gasigBC2pt%d",i));
-    gSignalBC2[i]->SetTitle(Form("Signal (BC2) %.1f<#it{p}_{T}<%.1f GeV/c;#Delta#phi bin;Counts",ptbinsnew[i],ptbinsnew[i+1]));
+    gSignalBC2[i]->SetTitle(Form("Signal (BC2) %.0f < #it{p}_{T} < %.0f GeV/c;#Delta#phi bin;Counts",ptbinsnew[i],ptbinsnew[i+1]));
   }
   FillSignalGraph(histlist,gSignal,gSignalfs,gSignalBC1,gSignalBC2,inoutanis);
 
@@ -669,7 +665,7 @@ void DmesonsFlowAnalysis(Bool_t inoutanis){
   grelSystEff->SetMarkerSize(1.5);
   
   //Prepare output file
-  TFile *fout=new TFile(Form("v2Output_%d_%d_%s_%s.root",minCent,maxCent,aniss.Data(),suffix.Data()),"RECREATE");
+  TFile *fout=new TFile(Form("v2Output_%d_%d_%s%s.root",minCent,maxCent,aniss.Data(),suffix.Data()),"RECREATE");
 
   for(Int_t ipt=0;ipt<nptbinsnew;ipt++){
     fout->cd();
@@ -706,7 +702,7 @@ void DmesonsFlowAnalysis(Bool_t inoutanis){
   gv2BC2->Write();
   grelSystEff->Write();
   
-  cv2->SaveAs(Form("v2Output_%d_%d_%s_%s.pdf",minCent,maxCent,aniss.Data(),suffix.Data()),"RECREATE");
+  cv2->SaveAs(Form("v2Output_%d_%d_%s%s.pdf",minCent,maxCent,aniss.Data(),suffix.Data()),"RECREATE");
 }
 //___________________________________________________________
 Int_t FindPtBin(Int_t nbins, Double_t* array,Double_t value){

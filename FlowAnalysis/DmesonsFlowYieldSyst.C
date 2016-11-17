@@ -92,7 +92,7 @@ const Int_t markers[] = {kFullSquare,kFullCircle,kFullTriangleUp,kFullDiamond,kO
 
 //_________________________________________________________________
 //METHODS PROTOTYPES
-void DmesonsFlowYieldSyst(Bool_t inoutanis=kTRUE);
+Int_t DmesonsFlowYieldSyst(Bool_t inoutanis=kTRUE);
 TList *LoadMassHistos(TList *inputlist,Bool_t inoutanis);
 TList* LoadResolutionHistos(TList *inputlist);
 Int_t FindPtBin(Int_t nbins, Double_t* array,Double_t value);
@@ -106,7 +106,7 @@ void SetStyle(Int_t optfit=0);
 
 //_________________________________________________________________
 //METHODS IMPLEMENTATION
-void DmesonsFlowYieldSyst(Bool_t inoutanis){
+Int_t DmesonsFlowYieldSyst(Bool_t inoutanis){
   
   TString dirname=Form("PWGHF_D2H_HFv2_%s%s",partname.Data(),suffix.Data());
   TString listname=Form("coutputv2%s%s",partname.Data(),suffix.Data());
@@ -115,11 +115,11 @@ void DmesonsFlowYieldSyst(Bool_t inoutanis){
   //Load input data from AliAnalysisTaskSEHFv2
   TFile *f = TFile::Open(filename.Data());
   if(!f){
-    printf("file %s not found, please check file name\n",filename.Data());return;
+    printf("file %s not found, please check file name\n",filename.Data());return 1;
   }
   TDirectoryFile* dir=(TDirectoryFile*)f->Get(dirname.Data());
   if(!dir){
-    printf("Directory %s not found, please check dir name\n",dirname.Data());return;
+    printf("Directory %s not found, please check dir name\n",dirname.Data());return 2;
   }
   if(partname.Contains("Dzero")) {
     cutsobj=((AliRDHFCutsD0toKpi*)dir->Get(dir->GetListOfKeys()->At(2)->GetName()));
@@ -140,14 +140,14 @@ void DmesonsFlowYieldSyst(Bool_t inoutanis){
   
   TList *list =(TList*)dir->Get(listname.Data());
   if(!list){
-    printf("list %s not found in file, please check list name\n",listname.Data());return;
+    printf("list %s not found in file, please check list name\n",listname.Data());return 3;
   }
   if(!cutsobj){
-    printf("cut object not found in file, please check keylist number\n");return;
+    printf("cut object not found in file, please check keylist number\n");return 4;
   }
   //Define new pt bins
   if(!DefinePtBins(cutsobj)){
-    printf("cut not define pt bins\n");return;
+    printf("cut not define pt bins\n");return 5;
   }
   
   //Load mass histograms corresponding to the required centrality, pt range and phi binning
@@ -175,7 +175,7 @@ void DmesonsFlowYieldSyst(Bool_t inoutanis){
     if(TMath::Abs(hmasspt->GetXaxis()->GetBinLowEdge(binMin)-ptbinsnew[ipt])>0.001 ||
        TMath::Abs(hmasspt->GetXaxis()->GetBinUpEdge(binMax)-ptbinsnew[ipt+1])>0.001){
       printf("Error in pt bin limits for projection!\n");
-      return;
+      return 6;
     }
     TH1F *histtofit = (TH1F*)hmasspt->ProjectionY("_py",binMin,binMax);
     Int_t nMassBins=histtofit->GetNbinsX();
@@ -256,6 +256,7 @@ void DmesonsFlowYieldSyst(Bool_t inoutanis){
   TH1F** hRawYieldBC2Ref = new TH1F*[nphi];
   TString reffilename = Form("v2Output_%d_%d_%s_%s.root",minCent,maxCent,aniss.Data(),suffix.Data());
   Int_t loadref=LoadRefGraphs(reffilename, hRawYieldRef, hRawYieldfsRef, hRawYieldBC1Ref, hRawYieldBC2Ref, gv2Ref, gv2fsRef, gv2BC1Ref, gv2BC2Ref, inoutanis);
+  if(loadref>0) {return 7;}
   
   TCanvas *cv2 =new TCanvas("cv2","v2 - systematic on yield extraction",1920,1080);
   DivideCanvas(cv2,nptbinsnew);
@@ -286,7 +287,7 @@ void DmesonsFlowYieldSyst(Bool_t inoutanis){
     DivideCanvas(cRawYield[iPhi],nptbinsnew);
   }
   
-  const Int_t nbins=50;
+  const Int_t nbins=25;
   
   const Int_t nTrials=nReb*nMins*nMaxs*nBkgFcn;
   
@@ -469,6 +470,7 @@ void DmesonsFlowYieldSyst(Bool_t inoutanis){
   
   for(Int_t iPt=0; iPt<nptbinsnew; iPt++) {
     cv2->cd(iPt+1);
+    hv2[iPt]->GetYaxis()->SetRangeUser(0.,hv2[iPt]->GetMaximum()*1.5);
     hv2[iPt]->Draw();
     hv2fs[iPt]->Draw("sames");
     hv2BC1[iPt]->Draw("sames");
@@ -550,6 +552,8 @@ void DmesonsFlowYieldSyst(Bool_t inoutanis){
   for(Int_t iPhi=0; iPhi<nphi; iPhi++) {
     cRawYield[iPhi]->SaveAs(Form("RawYieldSyst_phi%d_%d_%d_%s_%s.pdf",iPhi,minCent,maxCent,aniss.Data(),suffix.Data()));
   }
+
+  return 0;
 }
 
 //______________________________________________________________

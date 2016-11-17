@@ -1,20 +1,54 @@
-const Int_t nPtBins = 8;
-const Int_t nPtLims = nPtBins+1;
-Double_t PtLims[nPtLims] = {2,3,4,5,6,8,10,12,16};
+#if !defined(__CINT__) || defined(__MAKECINT__)
+#include <Riostream.h>
+#include <TFile.h>
+#include <TString.h>
+#include <TH2F.h>
+#include <TH1F.h>
+#include <TF1.h>
+#include <TMath.h>
+#include <TGraph.h>
+#include <TGraphErrors.h>
+#include <TMultiGraph.h>
+#include <TDirectoryFile.h>
+#include <TList.h>
+#include <TCanvas.h>
+#include <TLegend.h>
+#include <TLegendEntry.h>
+#include <TPaveText.h>
+#include <TStyle.h>
+#include <TASImage.h>
+#include <TPad.h>
+#include <TROOT.h>
+#include <TDatabasePDG.h>
+#include <TParameter.h>
+#include <TLatex.h>
+#include <TGraphAsymmErrors.h>
 
-void PlotMassFitsInOutOfPlane(TString filename="InvMassDeltaPhi_fs_TPC.root", Double_t nSigma=3) {
+#endif
+
+const Int_t colors[] = {kRed+1,kBlue+1};
+
+Int_t PlotMassFitsInOutOfPlane(TString filename="InvMassDeltaPhi_fs_Topod0Cut_VZERO_EP.root", TString masscanvasname="cinvmassdeltaphifs", Double_t nSigma=3) {
 
   gStyle->SetPadBottomMargin(0.16);
   gStyle->SetPadLeftMargin(0.18);
   gStyle->SetPadRightMargin(0.01);
   gStyle->SetTitleSize(0.07,"t");
   
-  TString masscanvasname="cinvmassdeltaphifs";
-  
   TFile* inmassfile=TFile::Open(filename,"READ");
-  TCanvas* c1=(TCanvas*)inmassfile->Get(masscanvasname.Data());
-  TList* l1=(TList*)c1->GetListOfPrimitives();
-
+  TCanvas* c1=0x0;
+  TList* l1=0x0;
+  if(inmassfile) {
+    c1=(TCanvas*)inmassfile->Get(masscanvasname.Data());
+    if(c1) {l1=(TList*)c1->GetListOfPrimitives();}
+    else {return 2;}
+    inmassfile->Close();
+  }
+  else {return 1;}
+  
+  const Int_t nPtBins = l1->GetSize()/2;
+  cout << nPtBins << endl;
+  
   TH1F** hMassInPlane = new TH1F*[nPtBins];
   TF1** fsInPlane = new TF1*[nPtBins];
   TF1** fbInPlane = new TF1*[nPtBins];
@@ -29,17 +63,17 @@ void PlotMassFitsInOutOfPlane(TString filename="InvMassDeltaPhi_fs_TPC.root", Do
   for(Int_t iPt=0; iPt<nPtBins; iPt++) {
     hMassInPlane[iPt] = (TH1F*)c1->GetPad(iPt+1)->GetPrimitive("fhistoInvMass");
     fsInPlane[iPt] = (TF1*)c1->GetPad(iPt+1)->GetPrimitive("funcmass");
-    fbInPlane[iPt] = (TF1*)c1->GetPad(iPt+1)->GetPrimitive("funcbkgFullRange");
+    fbInPlane[iPt] = (TF1*)c1->GetPad(iPt+1)->GetPrimitive("funcbkgRecalc");
     hMassInPlane[iPt]->SetDirectory(0);
     hMassOutOfPlane[iPt] = (TH1F*)c1->GetPad(nPtBins+iPt+1)->GetPrimitive("fhistoInvMass");
     fsOutOfPlane[iPt] = (TF1*)c1->GetPad(nPtBins+iPt+1)->GetPrimitive("funcmass");
-    fbOutOfPlane[iPt] = (TF1*)c1->GetPad(nPtBins+iPt+1)->GetPrimitive("funcbkgFullRange");
+    fbOutOfPlane[iPt] = (TF1*)c1->GetPad(nPtBins+iPt+1)->GetPrimitive("funcbkgRecalc");
     hMassOutOfPlane[iPt]->SetDirectory(0);
   }
   inmassfile->Close();
   
   TCanvas* cMassFits = new TCanvas("cMassFits","",10,10,1920,1080);
-  cMassFits->Divide(4,2);
+  cMassFits->Divide(4,3);
   
   for(Int_t iPt=0; iPt<nPtBins; iPt++) {
     infoInPlane1[iPt] = new TPaveText(0.25,0.58,0.5,0.70,"NDC");
@@ -116,13 +150,13 @@ void PlotMassFitsInOutOfPlane(TString filename="InvMassDeltaPhi_fs_TPC.root", Do
     hMassOutOfPlane[iPt]->GetFunction("funcbkgFullRange")->SetBit(TF1::kNotDraw);
     hMassInPlane[iPt]->GetFunction("funcbkgRecalc")->SetBit(TF1::kNotDraw);
     hMassOutOfPlane[iPt]->GetFunction("funcbkgRecalc")->SetBit(TF1::kNotDraw);
-    hMassInPlane[iPt]->SetMarkerColor(kBlue);
+    hMassInPlane[iPt]->SetMarkerColor(colors[1]);
     hMassInPlane[iPt]->SetMarkerSize(0.8);
-    hMassInPlane[iPt]->SetLineColor(kBlue);
-    fsInPlane[iPt]->SetLineColor(kBlue);
-    fbInPlane[iPt]->SetLineColor(kBlue);
-    infoInPlane1[iPt]->SetTextColor(kBlue);
-    infoInPlane2[iPt]->SetTextColor(kBlue);
+    hMassInPlane[iPt]->SetLineColor(colors[1]);
+    fsInPlane[iPt]->SetLineColor(colors[1]);
+    fbInPlane[iPt]->SetLineColor(colors[1]);
+    infoInPlane1[iPt]->SetTextColor(colors[1]);
+    infoInPlane2[iPt]->SetTextColor(colors[1]);
     hMassInPlane[iPt]->SetStats(0);
     hMassInPlane[iPt]->GetXaxis()->SetTitleSize(0.06);
     hMassInPlane[iPt]->GetYaxis()->SetTitleSize(0.06);
@@ -133,16 +167,17 @@ void PlotMassFitsInOutOfPlane(TString filename="InvMassDeltaPhi_fs_TPC.root", Do
     binwidth = hMassOutOfPlane[iPt]->GetBinWidth(15)*1000;
     hMassInPlane[iPt]->GetYaxis()->SetTitle(Form("Entries/(%0.f Mev/c^{2})",binwidth));
     hMassInPlane[iPt]->GetXaxis()->SetTitle("M_{K#pi#pi} (GeV/c^{2})");
-    TString title = hMassInPlane[iPt]->GetTitle();
-    hMassInPlane[iPt]->SetTitle(Form("%0.f < #it{p}_{T} < %0.f GeV/c",PtLims[iPt],PtLims[iPt+1]));
+    TString title=hMassInPlane[iPt]->GetTitle();
+    if(title.Contains(", #phi0")) {title.ReplaceAll(", #phi0","");}
+    hMassInPlane[iPt]->SetTitle(title.Data());
     
-    hMassOutOfPlane[iPt]->SetMarkerColor(kRed);
+    hMassOutOfPlane[iPt]->SetMarkerColor(colors[0]);
     hMassOutOfPlane[iPt]->SetMarkerSize(0.8);
-    hMassOutOfPlane[iPt]->SetLineColor(kRed);
-    fsOutOfPlane[iPt]->SetLineColor(kRed);
-    fbOutOfPlane[iPt]->SetLineColor(kRed);
-    infoOutOfPlane1[iPt]->SetTextColor(kRed);
-    infoOutOfPlane2[iPt]->SetTextColor(kRed);
+    hMassOutOfPlane[iPt]->SetLineColor(colors[0]);
+    fsOutOfPlane[iPt]->SetLineColor(colors[0]);
+    fbOutOfPlane[iPt]->SetLineColor(colors[0]);
+    infoOutOfPlane1[iPt]->SetTextColor(colors[0]);
+    infoOutOfPlane2[iPt]->SetTextColor(colors[0]);
     
     Double_t min = hMassInPlane[iPt]->GetMinimum()*0.8;
     if(hMassInPlane[iPt]->GetMinimum()>hMassOutOfPlane[iPt]->GetMinimum())
@@ -158,8 +193,8 @@ void PlotMassFitsInOutOfPlane(TString filename="InvMassDeltaPhi_fs_TPC.root", Do
     hMassOutOfPlane[iPt]->Draw("Esame");
     fsInPlane[iPt]->Draw("same");
     fsOutOfPlane[iPt]->Draw("same");
-    fbInPlane[iPt]->Draw("same");
-    fbOutOfPlane[iPt]->Draw("same");
+    //fbInPlane[iPt]->Draw("same");
+    //fbOutOfPlane[iPt]->Draw("same");
     infoInPlane1[iPt]->Draw("same");
     infoInPlane2[iPt]->Draw("same");
     infoOutOfPlane1[iPt]->Draw("same");
@@ -167,4 +202,5 @@ void PlotMassFitsInOutOfPlane(TString filename="InvMassDeltaPhi_fs_TPC.root", Do
   }
   
   cMassFits->SaveAs("MassFitsInOutOfPlane.pdf");
+  return 0;
 }
